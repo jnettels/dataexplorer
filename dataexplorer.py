@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Fri Nov  3 08:10:21 2017
 
 @author: Joris Nettelstroth
@@ -7,7 +7,7 @@ Created on Fri Nov  3 08:10:21 2017
 Start this script with:
 bokeh serve --show dataexplorer.py
 
-"""
+'''
 
 import pandas as pd
 import numpy as np
@@ -106,6 +106,30 @@ def create_test_data():
     return df
 
 
+def create_dataexplorer_UI(df, data_name):
+    '''Perform all the tasks necessary to create the Data Explorer user
+    interface. Is also used to re-create the UI when new data is loaded.
+    
+    Args:
+        df (Pandas DataFrame) : The input data we want to explore.
+            
+    Returns:
+        None
+    
+    '''
+    
+    # Get categories, their labels and vals (column names of values) from df
+    cats, cats_labels, vals = analyse_dataframe(df)
+    colour_cat = cats[0]  # The first colour category label is the default
+    grid, glyph_list, source2 = create_plots(df, cats_labels, vals, colour_cat)
+    
+    filter_list, filter_true = prepare_filter(cats, cats_labels, df)
+    wb_list = update_widgets(cats, cats_labels, colour_cat, filter_list,
+                             filter_true, df, source2, glyph_list)
+    
+    update_layout(wb_list, grid, data_name)
+
+
 def analyse_dataframe(df):
     '''Analyse a given DataFrame to seperate the columns in categories and
     values. "Object" columns become categories, their column names are saved
@@ -156,25 +180,28 @@ def create_plots(df, cats_labels, vals, colour_cat):
         colour_cat (str) : Name of the current colour category label 
     
     Returns:
-        cats
+        grid (Gridplot) : Grid containing all created figures
+        
+        glyph_list (List) : List of used glyphs
+        
+        source2 (ColumnDataSource) : Bokeh's data format
     
     '''
     source2 = ColumnDataSource(data=df)
     
     # The 'view' function seemed useful at first, but may not be flexible enough
-    #source_filters = [
-    #                  GroupFilter(column_name='Cat1', group='A'),
-    #                  GroupFilter(column_name='Cat2', group='First'),
-    #                  ]
-    #
-    #view = CDSView(source=source2,
-    #               filters=source_filters)
+#    source_filters = [
+#                      GroupFilter(column_name='Cat1', group='A'),
+#                      GroupFilter(column_name='Cat2', group='First'),
+#                      ]
+#    
+#    view = CDSView(source=source2,
+#                   filters=source_filters)
     
     
-    plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'box_select',
-                                     'lasso_select', 'reset', 'help'],
+    plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
+                                     'lasso_select', 'box_select', 'help'],
                            'active_scroll': 'wheel_zoom',
-    #                       'toolbar_location': 'left',
                            'plot_height': 250, 'plot_width': 250,
                            }
     
@@ -185,9 +212,9 @@ def create_plots(df, cats_labels, vals, colour_cat):
     
     
     # A choice of combinatoric generators with decending number of results:
-    #permutation_list = itertools.product(vals, repeat=2)
-    #permutation_list = itertools.permutations(vals, r=2)
-    #permutation_list = itertools.combinations_with_replacement(vals, r=2)
+#    permutation_list = itertools.product(vals, repeat=2)
+#    permutation_list = itertools.permutations(vals, r=2)
+#    permutation_list = itertools.combinations_with_replacement(vals, r=2)
     permutation_list = itertools.combinations(vals, r=2)
     
     
@@ -213,40 +240,94 @@ def create_plots(df, cats_labels, vals, colour_cat):
         p.legend.click_policy = "hide"
         fig_list.append(p)
         glyph_list.append(glyph)
-    #    p.legend.items = Legend(items=[('test', [glyph])])
-    #    p.legend.items = LegendItem=[('test', [glyph])]
+#        p.legend.items = Legend(items=[('test', [glyph])])
+#        p.legend.items = LegendItem=[('test', [glyph])]
     
     # Get the number of grid columns from the rounded square root of number of figs
     n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))
+    # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right')
     
     return grid, glyph_list, source2
 
 
-"""
-Test for adding legend
-"""
-#legend_fig = figure(plot_height= 150, plot_width= 150,
-#                    toolbar_location=None)
-#fake_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source2,
-#                 legend=colour_cat,
-#                 color=colour_def,
-#                 name='fake_glyph',
-#                 )
-#legend_fig.axis.visible = False
-#
-#legend = Legend(items=[('X', [glyph]),
-#                       ],
-#                location=(0,-30)
-#                )
-#
+    '''
+    Test for adding legend
+    '''
+#    legend_fig = figure(plot_height= 150, plot_width= 150,
+#                        toolbar_location=None)
+#    fake_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source2,
+#                     legend=colour_cat,
+#                     color=colour_def,
+#                     name='fake_glyph',
+#                     )
+#    legend_fig.axis.visible = False
+#    
+#    legend = Legend(items=[('X', [glyph]),
+#                           ],
+#                    location=(0,-30)
+#                    )
+#    
 
 
-"""
-Widget function definitions
-"""
+def update_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
+                   df, source2, glyph_list):
+    '''
+    Widget definitions
+    '''
+    cbg_list = []
+    div_list = []
+    for cat in cats:
+        labels = cats_labels[cat]  # Lables of current category
+        active_list = list(range(0, len(labels)))  # All labels start active
+        cbg = CheckboxButtonGroup(labels=labels, active=active_list)
+        cbg_list.append(cbg)
+        
+        # Make the annotation for the CheckboxButtonGroup:
+        div = Div(text='''<div style="text-align:right;font-size:12pt">
+                  '''+cat+''':
+                  </div>''', height=33)
+        div_list.append(div)
+    
+    for i, cbg in enumerate(cbg_list):
+        # We need the update_filter function to know who calls it, so we use
+        # the "partial" function to transport that information
+        cbg.on_click(partial(update_filter_i, caller=i, cats=cats,
+                             cats_labels=cats_labels,
+                             filter_list=filter_list, filter_true=filter_true,
+                             df=df, source2=source2
+                             ))
+    
+    sel = Select(title='Category label for colours:', value=colour_cat,
+                 options=cats)
+    sel.on_change('value', partial(update_colors, df=df,
+                                   glyph_list=glyph_list))
+    
+    but_load = Button(label='Load new file', button_type='success')
+    but_load.on_click(load_file)
 
-def prepare_filter(cats, cats_labels):
+
+    '''
+    Layout of widgets and plots
+    '''   
+    wb1 = widgetbox(*div_list, width=200)
+    wb2 = widgetbox(*cbg_list)
+    wb3 = widgetbox(sel, but_load)    
+    wb_list = [wb1, wb2, wb3]
+    
+    return wb_list
+
+
+def update_layout(wb_list, grid, data_name):
+    '''Create a Bokeh "layout" from the widgetboxes and grid of figures and
+    add it as "root" to the current Bokeh document.
+    '''
+    layout1 = layout(wb_list, [grid])
+    curdoc().add_root(layout1)
+    curdoc().title = 'Data Explorer: '+data_name
+
+
+def prepare_filter(cats, cats_labels, df):
     # Prepare a list containing all the filters, one for each category
     # The filters start all 'True' and will be modified later
     filter_list = []
@@ -272,6 +353,9 @@ def update_filter(filter_list, filter_true, df, source2):
 
 def update_filter_i(active, caller, cats, cats_labels,
                     filter_list, filter_true, df, source2):
+    '''
+    Widget function definitions
+    '''
 #    global filter_list
     i = caller
     cat_sel = cats[i]
@@ -295,9 +379,9 @@ def update_colors(attr, old, new, df, glyph_list):
         gly.glyph.line_color = colour_def
         
         
-    """
+    '''
     Test for modifying legend
-    """
+    '''
 #    for fig in fig_list:
 #        gly = fig.select_one({'name': 'glyph_name'})
 #        gly.glyph.fill_color = colour_def
@@ -327,7 +411,19 @@ def update_colors(attr, old, new, df, glyph_list):
 
 
 def load_file():
-    global df  # TODO not use global
+    '''This function is triggered by the "load new file" button and presents
+    a file dialog. The chosen file is read into a Pandas DataFrame. In order
+    to regenerate all widgets and figures, the current Bokeh dokument has to
+    be "cleared". Then create_dataexplorer_UI() is called which will add a
+    new root to the empty document.
+    
+    Args:
+        None
+    
+    Return:
+        None
+    
+    '''
     cwd = os.getcwd()
 #    root = Tk()
 #    dirname = filedialog.askdirectory(parent=root,
@@ -349,138 +445,25 @@ def load_file():
         df = pd.read_excel(root.filename)
     except:
         print(root.filename+' not loaded successfully')
-        
-#    source_new = ColumnDataSource(data=df)
-#    source2.data = source_new.data
+        return
+
     
-#    print(curdoc().roots)
-    
+#    print(curdoc().roots)    
     curdoc().clear()
-    
-    create_dataexplorer_UI(df)
-    
-#    cats, vals, cats_labels = analyse_dataframe(df)
-#    colour_cat = cats[0]
-#    
-#    grid, fig_list, glyph_list, source2 = create_plots(df, cats, vals, colour_cat)
-#    
-#    filter_list, filter_true = prepare_filter(cats, cats_labels)
-#    
-#    wb_list = update_widgets(cats, cats_labels, colour_cat)
-#    update_layout(wb_list, grid)
-    
-#    ServerConnection.send_patch_document('Hello')
-#    curdoc().detach_session()
+    data_name = os.path.basename(root.filename)
+    create_dataexplorer_UI(df, data_name)
 
 
-
-
-"""
-Widget definitions
-"""
-def update_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
-                   df, source2, glyph_list):
-    cbg_list = []
-    div_list = []
-    for cat in cats:
-        labels = cats_labels[cat]  # Lables of current category
-        active_list = list(range(0, len(labels)))  # All labels start active
-        cbg = CheckboxButtonGroup(labels=labels, active=active_list)
-        cbg_list.append(cbg)
-        
-        # Make the annotation for the CheckboxButtonGroup:
-        div = Div(text="""<div style="text-align:right;font-size:12pt">
-                  """+cat+""":
-                  </div>""", height=33)
-        div_list.append(div)
-    
-    for i, cbg in enumerate(cbg_list):
-        # We need the update_filter function to know who calls it, so we use
-        # the "partial" function to transport that information
-        cbg.on_click(partial(update_filter_i, caller=i, cats=cats,
-                             cats_labels=cats_labels,
-                             filter_list=filter_list, filter_true=filter_true,
-                             df=df, source2=source2
-                             ))
-    
-    categories = list(cats_labels.keys())
-#    categories = cats
-    sel = Select(title='Category label for colours:', value=colour_cat,
-                 options=categories)
-    sel.on_change('value', partial(update_colors, df=df, glyph_list=glyph_list))
-    
-    but_load = Button(label='Load new file', button_type='success')
-    but_load.on_click(load_file)
-
-
-    """
-    Layout of widgets and plots
-    """
-    
-    #wb_list = []
-    #for i, cbg in enumerate(cbg_list):
-    #    wb = widgetbox(div_list[i], cbg)
-    #    wb_list.append(wb)
-    
-    wb1 = widgetbox(*div_list, width=200)
-    wb2 = widgetbox(*cbg_list)
-    wb3 = widgetbox(sel, but_load)
-    
-    wb_list = [wb1, wb2, wb3]
-    
-    return wb_list
-
-
-def update_layout(wb_list, grid):
-    layout1 = layout(wb_list, [grid])
-
-    # For standalone html output:
-    #output_file('dataexplorer.html', title='Data Explorer')
-    #show(l)
-    
-    # For Bokeh Server use:
-    # add layout to the current document
-    curdoc().add_root(layout1)
-    curdoc().title = 'Data Explorer'
-
-
-
-
-
-def create_dataexplorer_UI(df):
-    '''Perform all the tasks necessary to create the Data Explorer user
-    interface. Is also used to re-create the UI when new data is loaded.
-    
-    Args:
-        df (Pandas DataFrame) : The input data we want to explore.
-            
-    Returns:
-        None
-    
-    '''
-    
-    # Get categories, their labels and vals (column names of values) from df
-    cats, cats_labels, vals = analyse_dataframe(df)
-    colour_cat = cats[0]  # The first colour category label is the default
-        
-    grid, glyph_list, source2 = create_plots(df, cats_labels, vals, colour_cat)
-    
-    filter_list, filter_true = prepare_filter(cats, cats_labels)
-    wb_list = update_widgets(cats, cats_labels, colour_cat, filter_list,
-                             filter_true, df, source2, glyph_list)
-    
-    update_layout(wb_list, grid)
-
-
-"""
+'''
 Main function:
     
 The following lines are executed when the python script is started by the
 bokeh server. We create an initial set of test data and then create the 
 Data Explorer UI.
-"""
+'''
 df = create_test_data()
-create_dataexplorer_UI(df)
+data_name = 'Test Data'
+create_dataexplorer_UI(df, data_name)
 
 
 
