@@ -4,27 +4,36 @@ Created on Fri Nov  3 08:10:21 2017
 
 @author: Joris Nettelstroth
 
-Start this script with:
-bokeh serve --show dataexplorer.py
+The DataExplorer should help you explore correlations within your data.
+
+Start this program with a command prompt in Windows:
+    - Go to Start and type "cmd"
+    - Select "Eingabeaufforderung"
+    - Change directory to the folder containing the script by typing
+      "cd path/to/folder"
+    - Start a Bokeh server running this script by typing
+      "bokeh serve --show dataexplorer.py"
+    - Your webbrowser should open and display the interface of the program
+    - Hit the button to load your own Excel file
 
 '''
 
 import pandas as pd
 import numpy as np
-from bokeh.layouts import widgetbox, gridplot, layout#, row
+import itertools
+import os
+from bokeh.layouts import widgetbox, gridplot, layout  # , row
 from bokeh.models.widgets import CheckboxButtonGroup, Select, Button
 from bokeh.models.widgets import Div
 from bokeh.models import ColumnDataSource, CategoricalColorMapper
-#from bokeh.models import Legend, CDSView, GroupFilter
-#from bokeh.models import Circle
-#from bokeh.server.connection import ServerConnection
+# from bokeh.models import Legend, CDSView, GroupFilter
+# from bokeh.models import Circle
+# from bokeh.server.connection import ServerConnection
 from bokeh.plotting import figure
 from bokeh.palettes import Spectral4 as palette
 from bokeh.io import curdoc
 from functools import partial
-import itertools
 from tkinter import Tk, filedialog
-import os
 
 
 def create_test_data():
@@ -481,10 +490,10 @@ def update_colors(attr, old, new, df, glyph_list):
 #                     )
 #    legend_fig.add_glyph(source,
 #                         Circle(x=vals[0], y=vals[1],
-##                                legend=colour_cat,
 #                                line_color=colour_def,
 #                                fill_color=colour_def,
 #                                name='fake_glyph',
+#                                legend=colour_cat,
 #                                )
 #                         )
 
@@ -520,9 +529,11 @@ def load_file():
                                                        ("all files", "*.*"),
                                                        )
                                                )
+
     try:
         df = pd.read_excel(root.filename)
     except Exception as ex:
+        # TODO this message has to be visible in the HTML document
         print('File '+root.filename+' NOT loaded!')
         print(ex)
         return  # Return before completing the function
@@ -538,7 +549,7 @@ Main function:
 
 The following lines are executed when the python script is started by the
 bokeh server. We create an initial set of test data and then create the
-Data Explorer UI.
+DataExplorer UI.
 '''
 df = create_test_data()
 data_name = 'Test Data'
