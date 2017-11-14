@@ -42,44 +42,44 @@ def create_test_data():
     dataA1 = {'T1': np.random.randint(0, 20, time_steps),
               'T2': np.random.randint(0, 30, time_steps),
               'Sin': np.sin(np.linspace(-np.pi, np.pi, time_steps)),
-              'Category 1': pd.Categorical(['A']*time_steps),
-              'Category 2': pd.Categorical(['First']*time_steps),
-              'Category 3': pd.Categorical(['10-20']*time_steps),
+              'Category Group 1': pd.Categorical(['A']*time_steps),
+              'Category Group 2': pd.Categorical(['First']*time_steps),
+              'Category Group 3': pd.Categorical(['10-20']*time_steps),
               }
     dataA2 = {'T1': np.random.randint(10, 30, time_steps),
               'T2': np.random.randint(10, 40, time_steps),
               'Sin': np.sin(np.linspace(-2*np.pi, 2*np.pi, time_steps)),
-              'Category 1': pd.Categorical(['A']*time_steps),
-              'Category 2': pd.Categorical(['Second']*time_steps),
-              'Category 3': pd.Categorical(['10-20']*time_steps),
+              'Category Group 1': pd.Categorical(['A']*time_steps),
+              'Category Group 2': pd.Categorical(['Second']*time_steps),
+              'Category Group 3': pd.Categorical(['10-20']*time_steps),
               }
     dataB1 = {'T1': np.random.randint(20, 40, time_steps),
               'T2': np.random.randint(20, 50, time_steps),
               'Sin': np.sin(np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category 1': pd.Categorical(['B']*time_steps),
-              'Category 2': pd.Categorical(['First']*time_steps),
-              'Category 3': pd.Categorical(['10-20']*time_steps),
+              'Category Group 1': pd.Categorical(['B']*time_steps),
+              'Category Group 2': pd.Categorical(['First']*time_steps),
+              'Category Group 3': pd.Categorical(['10-20']*time_steps),
               }
     dataB2 = {'T1': np.random.randint(30, 50, time_steps),
               'T2': np.random.randint(30, 60, time_steps),
               'Cos': np.cos(np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category 1': pd.Categorical(['B']*time_steps),
-              'Category 2': pd.Categorical(['Third']*time_steps),
-              'Category 3': pd.Categorical(['20-30']*time_steps),
+              'Category Group 1': pd.Categorical(['B']*time_steps),
+              'Category Group 2': pd.Categorical(['Third']*time_steps),
+              'Category Group 3': pd.Categorical(['20-30']*time_steps),
               }
     dataC1 = {'T1': np.random.randint(40, 60, time_steps),
               'T2': np.random.randint(40, 70, time_steps),
               'Sin': np.sin(0.5*np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category 1': pd.Categorical(['C']*time_steps),
-              'Category 2': pd.Categorical(['Second']*time_steps),
-              'Category 3': pd.Categorical(['20-30']*time_steps),
+              'Category Group 1': pd.Categorical(['C']*time_steps),
+              'Category Group 2': pd.Categorical(['Second']*time_steps),
+              'Category Group 3': pd.Categorical(['20-30']*time_steps),
               }
     dataC2 = {'T1': np.random.randint(50, 70, time_steps),
               'T2': np.random.randint(50, 80, time_steps),
               'Cos': np.cos(0.5*np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category 1': pd.Categorical(['C']*time_steps, categories=['C']),
-              'Category 2': pd.Categorical(['Third']*time_steps),
-              'Category 3': pd.Categorical(['20-30']*time_steps),
+              'Category Group 1': pd.Categorical(['C']*time_steps, categories=['C']),
+              'Category Group 2': pd.Categorical(['Third']*time_steps),
+              'Category Group 3': pd.Categorical(['20-30']*time_steps),
               }
     
     df = pd.concat([
@@ -103,10 +103,24 @@ Extract the column names from the data
 """
 
 def analyse_dataframe(df):
+    '''Analyse a given DataFrame to seperate the columns in categories and
+    values. "Object" columns become categories, their column names are saved
+    as category labels.
+    
+    Args:
+        df (Pandas DataFrame):
+            The input data we want to explore.
+    
+    Returns:
+        cats (List):
+            List of categories found in the DataFrame.
+        cats_labels (Dict):
+            Dictionary 
+    
+    '''
     columns_all = df.columns.values.tolist()
     cats = []
     vals = []
-    #vals = ['Time']
     for column in columns_all:
         if df[column].dtype == 'object':
             cats.append(column)
@@ -119,7 +133,7 @@ def analyse_dataframe(df):
     #    print(cat, (list(set(df[cat]))))
         cats_labels[cat] = sorted(list(set(df[cat])))
         
-    return cats, vals, cats_labels
+    return cats, cats_labels, vals
 
 
 
@@ -138,7 +152,7 @@ Use Bokeh to plot the data in an interactive way
 #cats, vals, cats_labels = analyse_dataframe(df)
 #colour_cat = cats[0]
 
-def create_plots(df, cats, vals, colour_cat):
+def create_plots(df, vals, colour_cat):
     source2 = ColumnDataSource(data=df)
     
     # The 'view' function seemed useful at first, but may not be flexible enough
@@ -200,7 +214,7 @@ def create_plots(df, cats, vals, colour_cat):
     n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right')
     
-    return grid, fig_list, glyph_list, source2
+    return grid, glyph_list, source2
 
 
 """
@@ -239,7 +253,7 @@ def prepare_filter(cats, cats_labels):
     return filter_list, filter_true
 
 
-def update_filter():
+def update_filter(filter_list, filter_true, source2):
     filter_combined = filter_true
     # "Multiply" all filters, to get one combined filter
     # (Booleans are compared with "&")
@@ -250,8 +264,9 @@ def update_filter():
     source2.data = source_new.data
 
 
-def update_filter_i(active, caller):
-    global filter_list
+def update_filter_i(active, caller, cats, cats_labels,
+                    filter_list, filter_true, source2):
+#    global filter_list
     i = caller
     cat_sel = cats[i]
     labels = cats_labels[cat_sel]
@@ -261,10 +276,10 @@ def update_filter_i(active, caller):
         labels_active.append(labels[j])
 
     filter_list[i] = df[cat_sel].isin(labels_active)
-    update_filter()
+    update_filter(filter_list, filter_true, source2)
 
 
-def update_colors(attr, old, new):
+def update_colors(attr, old, new, glyph_list):
     colour_cat = new
     bokeh_colormap = CategoricalColorMapper(palette=palette,
                                             factors=list(set(df[colour_cat])))
@@ -328,14 +343,24 @@ def load_file():
     print(root.filename)
 #    print(os.path.exists(root.filename))
     df = pd.read_excel(root.filename)
-    source_new = ColumnDataSource(data=df)
-    source2.data = source_new.data
+#    source_new = ColumnDataSource(data=df)
+#    source2.data = source_new.data
     
 #    print(curdoc().roots)
     
     curdoc().clear()
-    cats, vals, cats_labels = analyse_dataframe(df)
-    update_widgets(cats, cats_labels)
+    
+    create_dataexplorer_UI(df)
+    
+#    cats, vals, cats_labels = analyse_dataframe(df)
+#    colour_cat = cats[0]
+#    
+#    grid, fig_list, glyph_list, source2 = create_plots(df, cats, vals, colour_cat)
+#    
+#    filter_list, filter_true = prepare_filter(cats, cats_labels)
+#    
+#    wb_list = update_widgets(cats, cats_labels, colour_cat)
+#    update_layout(wb_list, grid)
     
 #    ServerConnection.send_patch_document('Hello')
 #    curdoc().detach_session()
@@ -346,7 +371,8 @@ def load_file():
 """
 Widget definitions
 """
-def update_widgets(cats, cats_labels, colour_cat):
+def update_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
+                   source2, glyph_list):
     cbg_list = []
     div_list = []
     for cat in cats:
@@ -364,13 +390,17 @@ def update_widgets(cats, cats_labels, colour_cat):
     for i, cbg in enumerate(cbg_list):
         # We need the update_filter function to know who calls it, so we use
         # the "partial" function to transport that information
-        cbg.on_click(partial(update_filter_i, caller=i))
+        cbg.on_click(partial(update_filter_i, caller=i, cats=cats,
+                             cats_labels=cats_labels,
+                             filter_list=filter_list, filter_true=filter_true,
+                             source2=source2
+                             ))
     
     categories = list(cats_labels.keys())
 #    categories = cats
-    sel = Select(title='Category for colours:', value=colour_cat,
+    sel = Select(title='Category group for colours:', value=colour_cat,
                  options=categories)
-    sel.on_change('value', update_colors)
+    sel.on_change('value', partial(update_colors, glyph_list=glyph_list))
     
     but_load = Button(label='Load new file', button_type='success')
     but_load.on_click(load_file)
@@ -409,26 +439,42 @@ def update_layout(wb_list, grid):
 
 
 
+
+def create_dataexplorer_UI(df):
+    '''Perform all the tasks necessary to create the Data Explorer user
+    interface. Is also used to re-create the UI when new data is loaded.
+    
+    Args:
+        df (Pandas DataFrame):
+            The input data we want to explore.
+            
+    Returns:
+        None
+    
+    '''
+    
+    # Get categories, their labels and vals (column names of values) from df
+    cats, cats_labels, vals = analyse_dataframe(df)
+    colour_cat = cats[0]
+        
+    grid, glyph_list, source2 = create_plots(df, vals, colour_cat)
+    
+    filter_list, filter_true = prepare_filter(cats, cats_labels)
+    wb_list = update_widgets(cats, cats_labels, colour_cat, filter_list,
+                             filter_true, source2, glyph_list)
+    
+    update_layout(wb_list, grid)
+
+
 """
 Main function:
     
-Execute the methods defined above.
-Only do this, if the script is executed directly (in contrast to imported).
+The following lines are executed when the python script is started by the
+bokeh server. We create an initial set of test data and then create the 
+Data Explorer UI.
 """
-
-#if __name__ == "__main__":
 df = create_test_data()
-cats, vals, cats_labels = analyse_dataframe(df)
-colour_cat = cats[0]
-    
-grid, fig_list, glyph_list, source2 = create_plots(df, cats, vals, colour_cat)
-
-filter_list, filter_true = prepare_filter(cats, cats_labels)
-wb_list = update_widgets(cats, cats_labels, colour_cat)
-
-update_layout(wb_list, grid)
-
-
+create_dataexplorer_UI(df)
 
 
 
