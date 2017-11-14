@@ -29,7 +29,8 @@ import os
 
 
 def create_test_data():
-    '''Create some test data.
+    '''Create some test data. Includes sin, cos and some random numbers. The
+    amount of data is hardcoded and controlled with the number of time steps.
     
     Args:
         None
@@ -38,11 +39,9 @@ def create_test_data():
         df (Pandas DataFrame) : An example set of test data.
     '''
     
-    time_steps = 10
+    time_steps = 10  # Control the amount of test data
     
-    new_index = pd.date_range(start='2017-11-01 00:00',
-    #                          end='2017-11-05 00:00',
-                              periods=time_steps,
+    new_index = pd.date_range(start='2017-11-01 00:00', periods=time_steps,
                               freq='D')
     
     dataA1 = {'T1': np.random.randint(0, 20, time_steps),
@@ -101,17 +100,19 @@ def create_test_data():
     df.reset_index(level=0, inplace=True)  # Make the index a regular column
     
     #df.to_excel('excel_text.xlsx')  # Save this as an Excel file if you want
-    #print(df)
+    #print(df)  # Show the final DataFrame in the terminal window
     
     return df
 
 
 def create_dataexplorer_UI(df, data_name):
-    '''Perform all the tasks necessary to create the Data Explorer user
-    interface. Is also used to re-create the UI when new data is loaded.
+    '''Performs all the tasks necessary to create the Data Explorer user
+    interface. It is also used to re-create the UI when new data is loaded.
     
     Args:
         df (Pandas DataFrame) : The input data we want to explore.
+        
+        data_name (str) : The (file)name of the current data set.
             
     Returns:
         None
@@ -121,14 +122,22 @@ def create_dataexplorer_UI(df, data_name):
     # Get categories, their labels and vals (column names of values) from df
     cats, cats_labels, vals = analyse_dataframe(df)
     colour_cat = cats[0]  # The first colour category label is the default
-    grid, glyph_list, source2 = create_plots(df, cats_labels, vals, colour_cat)
     
+    # Use Bokeh to plot the data in an interactive way
+    grid, glyph_list, source = create_plots(df, cats_labels, vals, colour_cat)
+    
+    # Prepare the filters used to explore the data
     filter_list, filter_true = prepare_filter(cats, cats_labels, df)
-    wb_list = update_widgets(cats, cats_labels, colour_cat, filter_list,
-                             filter_true, df, source2, glyph_list)
     
-    update_layout(wb_list, grid, data_name)
+    # Create and get a list of all the widgets used for user interaction
+    wb_list = create_widgets(cats, cats_labels, colour_cat, filter_list,
+                             filter_true, df, source, glyph_list)
+    
+    # Create a Bokeh "layout" from the widgetboxes and grid of figures
+    create_layout(wb_list, grid, data_name)
 
+    # The script ends here (but Bokeh keeps waiting for user input)
+    
 
 def analyse_dataframe(df):
     '''Analyse a given DataFrame to seperate the columns in categories and
@@ -167,7 +176,10 @@ def analyse_dataframe(df):
 
 
 def create_plots(df, cats_labels, vals, colour_cat):
-    '''Use Bokeh to plot the data in an interactive way.
+    '''Use Bokeh to plot the data in an interactive way. The Bokeh settings
+    are defined in this function, as well as the combinatoric generator which
+    generates the combinations of all the "vals". For each combination, a
+    figure is created and all of those figures are combined into one grid.
     
     Args:
         df (Pandas DataFrame) : The input data we want to explore.
@@ -177,17 +189,17 @@ def create_plots(df, cats_labels, vals, colour_cat):
         
         vals (List) : List of the column names that contain values.
         
-        colour_cat (str) : Name of the current colour category label 
+        colour_cat (str) : Name of the current colour category label.
     
     Returns:
-        grid (Gridplot) : Grid containing all created figures
+        grid (Gridplot) : Grid containing all created figures.
         
-        glyph_list (List) : List of used glyphs
+        glyph_list (List) : List of all used glyphs.
         
-        source2 (ColumnDataSource) : Bokeh's data format
+        source (ColumnDataSource) : Bokeh's data format.
     
     '''
-    source2 = ColumnDataSource(data=df)
+    source = ColumnDataSource(data=df)
     
     # The 'view' function seemed useful at first, but may not be flexible enough
 #    source_filters = [
@@ -195,7 +207,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
 #                      GroupFilter(column_name='Cat2', group='First'),
 #                      ]
 #    
-#    view = CDSView(source=source2,
+#    view = CDSView(source=source,
 #                   filters=source_filters)
     
     
@@ -230,7 +242,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
         else:
             p = figure(**plot_size_and_tools)
     
-        glyph = p.circle(x=x_val, y=y_val, source=source2,
+        glyph = p.circle(x=x_val, y=y_val, source=source,
                          legend=colour_cat, color=colour_def,
                          )
         p.xaxis.axis_label = x_val
@@ -248,7 +260,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
     # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right')
     
-    return grid, glyph_list, source2
+    return grid, glyph_list, source
 
 
     '''
@@ -256,7 +268,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
     '''
 #    legend_fig = figure(plot_height= 150, plot_width= 150,
 #                        toolbar_location=None)
-#    fake_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source2,
+#    fake_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source,
 #                     legend=colour_cat,
 #                     color=colour_def,
 #                     name='fake_glyph',
@@ -270,10 +282,20 @@ def create_plots(df, cats_labels, vals, colour_cat):
 #    
 
 
-def update_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
-                   df, source2, glyph_list):
-    '''
-    Widget definitions
+def create_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
+                   df, source, glyph_list):    
+    '''Create and return a list of all the widgets used for user interaction.
+    There are three types of widgets:
+        1. CheckboxButtonGroup: Used to toggle the category filters
+        2. Select: A dropdown menu used to define the current colour category
+        3. Button: Used to load a new file and then rebuild the whole layout
+    
+    Args:
+        Basically everything...
+    
+    Return:
+        wb_list (List) : A list of widgetboxes, each containing widgets.
+        
     '''
     cbg_list = []
     div_list = []
@@ -295,7 +317,7 @@ def update_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
         cbg.on_click(partial(update_filter_i, caller=i, cats=cats,
                              cats_labels=cats_labels,
                              filter_list=filter_list, filter_true=filter_true,
-                             df=df, source2=source2
+                             df=df, source=source
                              ))
     
     sel = Select(title='Category label for colours:', value=colour_cat,
@@ -318,18 +340,45 @@ def update_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
     return wb_list
 
 
-def update_layout(wb_list, grid, data_name):
+def create_layout(wb_list, grid, data_name):
     '''Create a Bokeh "layout" from the widgetboxes and grid of figures and
     add it as "root" to the current Bokeh document.
+    
+    Args:
+        wb_list (List) : A list of widgetboxes, each containing widgets.
+        
+        grid (Gridplot) : Grid containing all created figures.
+        
+        data_name (str) : The (file)name of the current data set.
+    
+    Return:
+        None
     '''
     layout1 = layout(wb_list, [grid])
     curdoc().add_root(layout1)
-    curdoc().title = 'Data Explorer: '+data_name
+    curdoc().title = 'DataExplorer: '+data_name
 
 
 def prepare_filter(cats, cats_labels, df):
-    # Prepare a list containing all the filters, one for each category
-    # The filters start all 'True' and will be modified later
+    ''' Prepare the filters used to explore the data. A filter is a list of
+    boolean values. Each category label needs its own filter. The filters start
+    all 'True' and will be modified later, based on the user input.
+    
+    Args:
+        cats (List) : List of the column names that contain categories.
+            
+        cats_labels (Dict) : Dictionary containing the categories associated
+            with each label.
+            
+        df (Pandas DataFrame) : The input data we want to explore.
+    
+    Return:
+        filter_list (List) : List containing all the filters, one for each 
+            category.
+        filter_true (List) : A list with the length of one column, where all
+            entries are "True".
+    
+    '''
     filter_list = []
     filter_true = []  # Define here, overwrite below, so we can use again later
     for cat in cats:
@@ -340,36 +389,78 @@ def prepare_filter(cats, cats_labels, df):
     return filter_list, filter_true
 
 
-def update_filter(filter_list, filter_true, df, source2):
-    filter_combined = filter_true
-    # "Multiply" all filters, to get one combined filter
-    # (Booleans are compared with "&")
-    for filter_i in filter_list:
-        filter_combined = filter_combined & filter_i
-#    print(filter_combined)
-    source_new = ColumnDataSource(data=df[filter_combined])
-    source2.data = source_new.data
+
 
 
 def update_filter_i(active, caller, cats, cats_labels,
-                    filter_list, filter_true, df, source2):
+                    filter_list, filter_true, df, source):
+    '''Function associated with the CheckboxButtonGroups (CBG). Each CBG has
+    one corresponding filter (which belongs to one category label). The calling
+    CBG identifies itself with the "caller" argument. It delivers a list of the 
+    positions of the buttons which are now active (after the user input). The
+    positions are translated into category strings (which are the button 
+    labels). The filters are updated based on the selected categories and then
+    the DataFrame is filtered accordingly. Updating Bokeh's source object makes
+    all the figures update, as well.
+    
+    Args:
+        active (List) : A list of the positions of those buttons, which are
+            currently active.
+        
+        caller (int) : Number of the ButtonGroup which is calling this function
+        
+        ... and lots more
+    
+    Returns:
+        None
+    
     '''
-    Widget function definitions
-    '''
-#    global filter_list
     i = caller
-    cat_sel = cats[i]
-    labels = cats_labels[cat_sel]
+    cat_sel = cats[i]  # Name of category label corresponding to calling CBG
+    labels = cats_labels[cat_sel]  # Categories within that label
 
+    # Translate the active button positions into chosen category strings
     labels_active = []
     for j in active:
         labels_active.append(labels[j])
 
+    # Get a boolean filter of the selected category label, where the selected
+    # categories are "True". Store this in the correct filter_list
     filter_list[i] = df[cat_sel].isin(labels_active)
-    update_filter(filter_list, filter_true, df, source2)
+    
+    # "Multiply" all filters to get one combined filter (Booleans are compared 
+    # with "&"). We start with all entries "True". Then we compare all filters
+    # in the filter_list. In the end, only those rows remain "True" which are
+    # "True" in all filters.
+    filter_combined = filter_true  
+    for filter_i in filter_list:
+        filter_combined = filter_combined & filter_i
+    
+    # Create a new ColumnDataSource object from the filtered DataFrame
+    source_new = ColumnDataSource(data=df[filter_combined])
+    
+    # Update the "data" property of the "source" object with the new data.
+    # Once the "source" changes, the figures and glyphs update automagically,
+    # thanks to Bokeh's magic.
+    source.data = source_new.data
 
 
 def update_colors(attr, old, new, df, glyph_list):
+    '''Function associated with the colour category dropdown menu widget.
+    The selected colour category label becomes the new "colour_cat". Based on
+    that the Bokeh colourmap is regenerated and applied to all the glyphs.
+    
+    Args:
+        new (str) : Selected colour category label.
+        
+        df (Pandas DataFrame) : The input data we want to explore.
+        
+        glyph_list (List) : List of all used glyphs.
+    
+    Return:
+        None
+    
+    '''
     colour_cat = new
     bokeh_colormap = CategoricalColorMapper(palette=palette,
                                             factors=list(set(df[colour_cat])))
@@ -395,12 +486,12 @@ def update_colors(attr, old, new, df, glyph_list):
 #    legend_fig.axis.visible = True
 #    fake_glyph = legend_fig.select_one({'name': 'fake_glyph'})
 #    legend_fig.renderers.remove(fake_glyph)
-#    legend_fig.circle(x=vals[0], y=vals[1], source=source2,
+#    legend_fig.circle(x=vals[0], y=vals[1], source=source,
 #                     legend=colour_cat,
 #                     color=colour_def,
 #                     name='fake_glyph',
 #                     )
-#    legend_fig.add_glyph(source2,
+#    legend_fig.add_glyph(source,
 #                         Circle(x=vals[0], y=vals[1],
 ##                                legend=colour_cat,
 #                                line_color=colour_def,
