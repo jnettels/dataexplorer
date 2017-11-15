@@ -4,7 +4,9 @@ Created on Fri Nov  3 08:10:21 2017
 
 @author: Joris Nettelstroth
 
-The DataExplorer should help you explore correlations within your data.
+The DataExplorer should help you explore correlations within your data. It
+features a user interface that shows scatter plots of all the variables in
+your data. Categories found in your data can be used to filter the views.
 
 Start this program with a command prompt in Windows:
     - Go to Start and type "cmd"
@@ -12,9 +14,14 @@ Start this program with a command prompt in Windows:
     - Change directory to the folder containing the script by typing
       "cd path/to/folder"
     - Start a Bokeh server running this script by typing
-      "bokeh serve --show dataexplorer.py"
+      "bokeh serve dataexplorer.py --show"
     - Your webbrowser should open and display the interface of the program
     - Hit the button to load your own Excel file
+
+If you do not yet have Python and Bokeh installed, the easiest way to do that
+is by downloading and installing "Anaconda" from here:
+https://www.anaconda.com/download/
+Its a package manager that distributes Python with data science packages.
 
 '''
 
@@ -318,7 +325,7 @@ def create_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
     for i, cbg in enumerate(cbg_list):
         # We need the update_filter function to know who calls it, so we use
         # the "partial" function to transport that information
-        cbg.on_click(partial(update_filter_i, caller=i, cats=cats,
+        cbg.on_click(partial(update_filters, caller=i, cats=cats,
                              cats_labels=cats_labels,
                              filter_list=filter_list, filter_true=filter_true,
                              df=df, source=source
@@ -390,8 +397,8 @@ def prepare_filter(cats, cats_labels, df):
     return filter_list, filter_true
 
 
-def update_filter_i(active, caller, cats, cats_labels,
-                    filter_list, filter_true, df, source):
+def update_filters(active, caller, cats, cats_labels,
+                   filter_list, filter_true, df, source):
     '''Function associated with the CheckboxButtonGroups (CBG). Each CBG has
     one corresponding filter (which belongs to one category label). The calling
     CBG identifies itself with the "caller" argument. It delivers a list of the
@@ -449,6 +456,10 @@ def update_colors(attr, old, new, df, glyph_list):
     that the Bokeh colourmap is regenerated and applied to all the glyphs.
 
     Args:
+        attr (str) : The widget's attribute that is told about in old and new
+
+        old (str) : Previously selected colour category label.
+
         new (str) : Selected colour category label.
 
         df (Pandas DataFrame) : The input data we want to explore.
@@ -549,7 +560,7 @@ Main function:
 
 The following lines are executed when the python script is started by the
 bokeh server. We create an initial set of test data and then create the
-DataExplorer UI.
+DataExplorer user interface.
 '''
 df = create_test_data()
 data_name = 'Test Data'
