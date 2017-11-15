@@ -40,7 +40,7 @@ from bokeh.plotting import figure
 from bokeh.palettes import Spectral4 as palette
 from bokeh.io import curdoc
 from functools import partial
-from tkinter import Tk, filedialog
+from tkinter import Tk, filedialog, messagebox
 
 
 def create_test_data():
@@ -544,10 +544,11 @@ def load_file():
     try:
         df = pd.read_excel(root.filename)
     except Exception as ex:
-        # TODO this message has to be visible in the HTML document
-        print('File '+root.filename+' NOT loaded!')
-        print(ex)
-        return  # Return before completing the function
+        # Show the error message in the terminal and in a pop-up messagebox:
+        message = 'File not loaded: '+root.filename+'\n'+str(ex)
+        print(message)
+        messagebox.showinfo('File not loaded!', message)
+        return  # Return, instead of completing the function
 
 #    print(curdoc().roots)
     curdoc().clear()
