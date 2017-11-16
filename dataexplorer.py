@@ -31,7 +31,8 @@ import itertools
 import os
 from bokeh.layouts import widgetbox, gridplot, layout  # , row
 from bokeh.models.widgets import CheckboxButtonGroup, Select, Button
-from bokeh.models.widgets import Div
+from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
+from bokeh.models.widgets import Panel, Tabs, TextInput
 from bokeh.models import ColumnDataSource, CategoricalColorMapper
 # from bokeh.models import Legend, CDSView, GroupFilter
 # from bokeh.models import Circle
@@ -120,12 +121,15 @@ def create_test_data():
     return df
 
 
-def create_dataexplorer_UI(df, data_name):
+def create_dataexplorer_UI(df, filepath, data_name):
     '''Performs all the tasks necessary to create the Data Explorer user
-    interface. It is also used to re-create the UI when new data is loaded.
+    interface by calling the required functions. It is also used to recreate
+    the UI when new data is loaded.
 
     Args:
         df (Pandas DataFrame) : The input data we want to explore.
+
+        filepath (str) : Path to file to load.
 
         data_name (str) : The (file)name of the current data set.
 
@@ -144,12 +148,18 @@ def create_dataexplorer_UI(df, data_name):
     # Prepare the filters used to explore the data
     filter_list, filter_true = prepare_filter(cats, cats_labels, df)
 
-    # Create and get a list of all the widgets used for user interaction
-    wb_list = create_widgets(cats, cats_labels, colour_cat, filter_list,
-                             filter_true, df, source, glyph_list)
+    # Create and get a list of the widgets for tab 1
+    wb_list_1 = create_widgets_1(cats, cats_labels, colour_cat, filter_list,
+                                 filter_true, df, source, glyph_list)
 
-    # Create a Bokeh "layout" from the widgetboxes and grid of figures
-    create_layout(wb_list, grid, data_name)
+    # Create and get a list of the widgets for tab 2
+    wb_list_2 = create_widgets_2(filepath)
+
+    # Create and get the DataTable for tab 3
+    data_table = create_data_table(source)
+
+    # Create a Bokeh "layout" from the widgets and grid of figures
+    create_layout(wb_list_1, grid, wb_list_2, data_table, data_name)
 
     # The script ends here (but Bokeh keeps waiting for user input)
 
@@ -226,9 +236,12 @@ def create_plots(df, cats_labels, vals, colour_cat):
 #                   filters=source_filters)
 
     plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
-                                     'lasso_select', 'box_select', 'help'],
+                                     'lasso_select', 'box_select',
+                                     'save',
+                                     'help'],
                            'active_scroll': 'wheel_zoom',
                            'plot_height': 250, 'plot_width': 250,
+                           'lod_factor': 1000,  # level-of-detail decimation
                            }
 
     bokeh_colormap = CategoricalColorMapper(palette=palette,
@@ -293,10 +306,10 @@ def create_plots(df, cats_labels, vals, colour_cat):
 #
 
 
-def create_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
-                   df, source, glyph_list):
-    '''Create and return a list of all the widgets used for user interaction.
-    There are three types of widgets:
+def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
+                     df, source, glyph_list):
+    '''Create and return a list of the widgets for tab 1. There are two types
+    of widgets:
         1. CheckboxButtonGroup: Used to toggle the category filters
         2. Select: A dropdown menu used to define the current colour category
         3. Button: Used to load a new file and then rebuild the whole layout
@@ -305,7 +318,7 @@ def create_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
         Basically everything...
 
     Return:
-        wb_list (List) : A list of widgetboxes, each containing widgets.
+        wb_list_1 (List) : A list of widgetboxes, each containing widgets.
 
     '''
     cbg_list = []
@@ -336,34 +349,105 @@ def create_widgets(cats, cats_labels, colour_cat, filter_list, filter_true,
     sel.on_change('value', partial(update_colors, df=df,
                                    glyph_list=glyph_list))
 
-    but_load = Button(label='Load new file', button_type='success')
-    but_load.on_click(load_file)
-
     # Put all the widgets in boxes, so they can be handled more easily:
     wb1 = widgetbox(*div_list, width=200)
     wb2 = widgetbox(*cbg_list)
-    wb3 = widgetbox(sel, but_load)
-    wb_list = [wb1, wb2, wb3]
+    wb3 = widgetbox(sel)
+    wb_list_1 = [wb1, wb2, wb3]
 
-    return wb_list
+    return wb_list_1
 
 
-def create_layout(wb_list, grid, data_name):
-    '''Create a Bokeh "layout" from the widgetboxes and grid of figures and
-    add it as "root" to the current Bokeh document.
+def create_widgets_2(filepath):
+    '''Create and return a list of the widgets for tab 2. There are three
+    types of widgets:
+        1. Button: Used to load a new file and then rebuild the whole layout
+        2. Div: Print text
+        3. TextInput: Field for user input
 
     Args:
-        wb_list (List) : A list of widgetboxes, each containing widgets.
+        filepath (str) : Path to file to load.
+
+    Return:
+        wb_list_2 (List) : A list of widgetboxes, each containing widgets.
+
+    '''
+    but_load_new = Button(label='Show file dialog', button_type='success')
+    but_load_new.on_click(load_file_dialog)
+
+    div1 = Div(text='''<div>
+                  Load a new file with a file dialog (only works if you run
+                  this script locally)
+                  </div>''', width=600)
+    div2 = Div(text='''<div> </div>''', height=33, width=600)  # Empty text
+
+    text_input = TextInput(value=filepath,
+                           title='Load this file (the server must have '
+                           'access to the file):',
+                           width=600)
+
+    but_reload = Button(label='Load file', button_type='success')
+    but_reload.on_click(partial(reload_file, text_input))
+    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
+    wb_list_2 = [wb]
+
+    return wb_list_2
+
+
+def create_data_table(source):
+    '''Create and return the DataTable widget for tab 3.
+
+    Args:
+        source (ColumnDataSource) : The Bokeh source object
+
+    Return:
+        data_table (DataTable) : Bokeh DataTable widget.
+
+    '''
+    columns = []
+
+    for name in source.column_names[:-1]:  # Skip the last entry (index)
+        if name == 'Time':
+            column = TableColumn(field=name, title=name,
+                                 formatter=DateFormatter())
+        else:
+            column = TableColumn(field=name, title=name)
+        columns.append(column)
+
+    data_table = DataTable(source=source, columns=columns,
+                           width=1400, height=800)
+    return data_table
+
+
+def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
+    '''Create a Bokeh "layouts" from the widgetboxes and grid of figures.
+    The layouts are organized into tabs and those are added as "root" to the
+    current Bokeh document.
+
+    Args:
+        wb_list_1 (List) : A list of widgetboxes, each containing widgets.
 
         grid (Gridplot) : Grid containing all created figures.
+
+        wb_list_2 (List) : A list of widgetboxes, each containing widgets.
+
+        data_table (DataTable) : Bokeh DataTable widget.
 
         data_name (str) : The (file)name of the current data set.
 
     Return:
         None
     '''
-    layout1 = layout(wb_list, [grid])
-    curdoc().add_root(layout1)
+    layout_1 = layout(wb_list_1, [grid])
+    layout_2 = layout(data_table)
+    layout_3 = layout(wb_list_2)
+
+    tab_1 = Panel(child=layout_1, title='Scatters')
+    tab_2 = Panel(child=layout_2, title='Data Table')
+    tab_3 = Panel(child=layout_3, title='Settings')
+    tabs = Tabs(tabs=[tab_1, tab_2, tab_3])
+
+    curdoc().add_root(tabs)
     curdoc().title = 'DataExplorer: '+data_name
 
 
@@ -509,12 +593,9 @@ def update_colors(attr, old, new, df, glyph_list):
 #                         )
 
 
-def load_file():
+def load_file_dialog():
     '''This function is triggered by the "load new file" button and presents
-    a file dialog. The chosen file is read into a Pandas DataFrame. In order
-    to regenerate all widgets and figures, the current Bokeh dokument has to
-    be "cleared". Then create_dataexplorer_UI() is called which will add a
-    new root to the empty document.
+    a file dialog. The user choice is handed to the load_file() function.
 
     Args:
         None
@@ -540,20 +621,53 @@ def load_file():
                                                        ("all files", "*.*"),
                                                        )
                                                )
+    load_file(root.filename)
 
+
+def reload_file(text_input):
+    '''This function is triggered by the "load file" button. It asks the
+    text_input widget for its current value and hands that to load_file().
+
+    Args:
+        text_input (TextInput) : Bokeh widget
+
+    Return:
+        None
+
+    '''
+    filepath = text_input.value
+    load_file(filepath)
+
+
+def load_file(filepath):
+    '''The chosen file is read into a Pandas DataFrame. In order
+    to regenerate all widgets and figures, the current Bokeh dokument has to
+    be "cleared". Then create_dataexplorer_UI() is called which will add a
+    new root to the empty document.
+
+    Args:
+        filepath (str) : Path to file to load.
+
+    Return:
+        None
+
+    '''
+    if len(filepath) == 0:  # No file selected, or file dialog cancelled
+        return  # Return, instead of completing the function
+
+    print('Trying to load', filepath)
     try:
-        df = pd.read_excel(root.filename)
+        df = pd.read_excel(filepath)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up messagebox:
-        message = 'File not loaded: '+root.filename+'\n'+str(ex)
+        message = 'File not loaded: '+filepath+'\n'+str(ex)
         print(message)
         messagebox.showinfo('File not loaded!', message)
         return  # Return, instead of completing the function
 
-#    print(curdoc().roots)
     curdoc().clear()
-    data_name = os.path.basename(root.filename)
-    create_dataexplorer_UI(df, data_name)
+    data_name = os.path.basename(filepath)
+    create_dataexplorer_UI(df, filepath, data_name)
 
 
 '''
@@ -565,4 +679,7 @@ DataExplorer user interface.
 '''
 df = create_test_data()
 data_name = 'Test Data'
-create_dataexplorer_UI(df, data_name)
+filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
+           '\excel_text.xlsx'
+
+create_dataexplorer_UI(df, filepath, data_name)
