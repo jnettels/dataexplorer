@@ -43,6 +43,8 @@ from bokeh.io import curdoc
 from functools import partial
 from tkinter import Tk, filedialog, messagebox
 
+from pandas.api.types import CategoricalDtype, is_categorical_dtype
+
 
 def create_test_data():
     '''Create some test data. Includes sin, cos and some random numbers. The
@@ -115,6 +117,13 @@ def create_test_data():
     df.index.name = 'Time'
     df.reset_index(level=0, inplace=True)  # Make the index a regular column
 
+    # With categories applied, e.g. sorting strings could be enabled
+    c1 = CategoricalDtype(['A', 'B', 'C'], ordered=True)
+    c2 = CategoricalDtype(['First', 'Second', 'Third'], ordered=True)
+    df['Category Label 1'] = df['Category Label 1'].astype(c1)
+    df['Category Label 2'] = df['Category Label 2'].astype(c2)
+#    print(df.sort_values(by=['Category Label 2', 'Category Label 1']))
+
 #    df.to_excel('excel_text.xlsx')  # Save this as an Excel file if you want
 #    print(df)  # Show the final DataFrame in the terminal window
 
@@ -186,9 +195,8 @@ def analyse_dataframe(df):
     vals = []
     for column in columns:
         # The column contains categories or values
-        if df[column].dtype == 'object':
+        if df[column].dtype == object or is_categorical_dtype(df[column]):
             cats.append(column)
-#            df[column] = df[column].astype('category')
         else:
             vals.append(column)
 
