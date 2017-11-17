@@ -213,11 +213,13 @@ def analyse_dataframe(df):
 
     cats_labels = dict()
     for cat in cats:
-        entries = list(set(df[cat]))
         try:  # Try to sort the categories
+            entries = list(set(df[cat]))
             cats_labels[cat] = sorted(entries)
         except Exception as ex:  # Map to strings before sorting
-            cats_labels[cat] = list(sorted(map(str, entries)))
+            df[cat] = list(map(str, df[cat]))
+            entries = list(set(df[cat]))
+            cats_labels[cat] = sorted(entries)
             pass
 #        print(cat, cats_labels[cat])
 
@@ -381,7 +383,7 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
 
     # Put all the widgets in boxes, so they can be handled more easily:
     wb1 = widgetbox(*div_list, width=200)
-    wb2 = widgetbox(*cbg_list)
+    wb2 = widgetbox(*cbg_list, width=600)
     wb3 = widgetbox(sel)
     wb_list_1 = [wb1, wb2, wb3]
 
