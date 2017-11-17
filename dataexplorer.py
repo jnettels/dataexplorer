@@ -621,7 +621,7 @@ def load_file_dialog():
 #        print("You chose %s" % dirname)
 
     root = Tk()
-    root.withdraw()
+    root.withdraw()  # Important: Hides the empty 'root' window
     root.filename = filedialog.askopenfilename(initialdir=cwd,
                                                title="Please choose your file",
                                                filetypes=(
@@ -670,6 +670,9 @@ def load_file(filepath):
         # Show the error message in the terminal and in a pop-up messagebox:
         message = 'File not loaded: '+filepath+'\n'+str(ex)
         print(message)
+
+        root = Tk()
+        root.withdraw()  # Important: Hides the empty 'root' window
         messagebox.showinfo('File not loaded!', message)
         return  # Return, instead of completing the function
 
