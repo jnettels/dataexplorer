@@ -8,7 +8,9 @@ The DataExplorer should help you explore correlations within your data. It
 features a user interface that shows scatter plots of all the variables in
 your data. Categories found in your data can be used to filter the views.
 
-Start this program with a command prompt in Windows:
+You can start this program with the "start_bokeh.cmd" batch file.
+
+Alternatively, you can start it with your own command prompt in Windows:
     - Go to Start and type "cmd"
     - Select "Eingabeaufforderung"
     - Change directory to the folder containing the script by typing
@@ -22,6 +24,10 @@ If you do not yet have Python and Bokeh installed, the easiest way to do that
 is by downloading and installing "Anaconda" from here:
 https://www.anaconda.com/download/
 Its a package manager that distributes Python with data science packages.
+
+During installation, please allow to add variables to $PATH (or to that
+manually afterwards.) This allows Bokeh to be started from everywhere, which
+is required for the batch file to work.
 
 '''
 
@@ -38,12 +44,13 @@ from bokeh.models import ColumnDataSource, CategoricalColorMapper
 # from bokeh.models import Circle
 # from bokeh.server.connection import ServerConnection
 from bokeh.plotting import figure
-from bokeh.palettes import Spectral4 as palette
+from bokeh.palettes import Spectral10 as palette
 from bokeh.io import curdoc
 from functools import partial
 from tkinter import Tk, filedialog, messagebox
 
-from pandas.api.types import CategoricalDtype, is_categorical_dtype
+from pandas.api.types import is_categorical_dtype
+# from pandas.api.types import CategoricalDtype
 
 
 def create_test_data():
@@ -57,7 +64,7 @@ def create_test_data():
         df (Pandas DataFrame) : An example set of test data.
     '''
 
-    time_steps = 10  # Control the amount of test data
+    time_steps = 20  # Control the amount of test data
 
     new_index = pd.date_range(start=pd.to_datetime('today'),
                               periods=time_steps, freq='D')
@@ -117,11 +124,12 @@ def create_test_data():
     df.index.name = 'Time'
     df.reset_index(level=0, inplace=True)  # Make the index a regular column
 
-    # With categories applied, e.g. sorting strings could be enabled
-    c1 = CategoricalDtype(['A', 'B', 'C'], ordered=True)
-    c2 = CategoricalDtype(['First', 'Second', 'Third'], ordered=True)
-    df['Category Label 1'] = df['Category Label 1'].astype(c1)
-    df['Category Label 2'] = df['Category Label 2'].astype(c2)
+    # With categories applied, e.g. sorting them could be enabled
+    # Requires Pandas >= 0.21
+#    c1 = CategoricalDtype(['A', 'B', 'C'], ordered=True)
+#    c2 = CategoricalDtype(['First', 'Second', 'Third'], ordered=True)
+#    df['Category Label 1'] = df['Category Label 1'].astype(c1)
+#    df['Category Label 2'] = df['Category Label 2'].astype(c2)
 #    print(df.sort_values(by=['Category Label 2', 'Category Label 1']))
 
 #    df.to_excel('excel_text.xlsx')  # Save this as an Excel file if you want
@@ -204,6 +212,12 @@ def analyse_dataframe(df):
     for cat in cats:
         cats_labels[cat] = sorted(list(set(df[cat])))
 #        print(cat, (list(set(df[cat]))))
+
+    max_vals = 8
+    if len(vals) > max_vals:
+        vals = vals[:max_vals]
+        message = 'Only showing the first '+str(max_vals)+' value columns.'
+        show_info('Too many value columns!', message)
 
     return cats, cats_labels, vals
 
@@ -670,15 +684,29 @@ def load_file(filepath):
         # Show the error message in the terminal and in a pop-up messagebox:
         message = 'File not loaded: '+filepath+'\n'+str(ex)
         print(message)
-
-        root = Tk()
-        root.withdraw()  # Important: Hides the empty 'root' window
-        messagebox.showinfo('File not loaded!', message)
+        show_info('File not loaded!', message)
         return  # Return, instead of completing the function
 
     curdoc().clear()
     data_name = os.path.basename(filepath)
     create_dataexplorer_UI(df, filepath, data_name)
+
+
+def show_info(title, message):
+    '''Shows a notification window with given title and message.
+
+    Args:
+        title (str) : Title of window.
+
+        message (str) : message text.
+
+    Return:
+        None
+
+    '''
+    root = Tk()
+    root.withdraw()  # Important: Hides the empty 'root' window
+    messagebox.showinfo(title, message)
 
 
 '''
