@@ -29,6 +29,8 @@ During installation, please allow to add variables to $PATH (or to that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
+TODO Import palettes with more colours / use different markers?
+
 '''
 
 import pandas as pd
@@ -51,6 +53,7 @@ from tkinter import Tk, filedialog, messagebox
 
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
+# import socket
 
 
 def create_test_data():
@@ -64,7 +67,7 @@ def create_test_data():
         df (Pandas DataFrame) : An example set of test data.
     '''
 
-    time_steps = 20  # Control the amount of test data
+    time_steps = 10  # Control the amount of test data
 
     new_index = pd.date_range(start=pd.to_datetime('today'),
                               periods=time_steps, freq='D')
@@ -465,7 +468,7 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
     Return:
         None
     '''
-    layout_1 = layout(wb_list_1, [grid])
+    layout_1 = layout(wb_list_1, grid)
     layout_2 = layout(data_table)
     layout_3 = layout(wb_list_2)
 
@@ -476,6 +479,18 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
 
     curdoc().add_root(tabs)
     curdoc().title = 'DataExplorer: '+data_name
+
+    # The children of a layout can be treated like a list:
+#    layout_1.children.remove(grid)
+#    layout_1.children.append(grid)
+
+#    rootLayout = curdoc().get_model_by_name('layout_1')
+#    listOfSubLayouts = rootLayout.children
+#    print(layout_1)
+#
+#    plotToRemove = curdoc().get_model_by_name('plot_grid')
+#    print(plotToRemove)
+#    layout_1.children.remove(plotToRemove)
 
 
 def prepare_filter(cats, cats_labels, df):
@@ -723,6 +738,16 @@ The following lines are executed when the python script is started by the
 bokeh server. We create an initial set of test data and then create the
 DataExplorer user interface.
 '''
+
+'''Testing: Get IP
+ip = socket.gethostbyname(socket.gethostname())
+print(ip)
+
+args = curdoc().session_context.request
+print(args)
+print(args.__dir__)
+'''
+
 df = create_test_data()
 data_name = 'Test Data'
 filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
