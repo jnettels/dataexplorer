@@ -210,8 +210,13 @@ def analyse_dataframe(df):
 
     cats_labels = dict()
     for cat in cats:
-        cats_labels[cat] = sorted(list(set(df[cat])))
-#        print(cat, (list(set(df[cat]))))
+        entries = list(set(df[cat]))
+        try:  # Try to sort the categories
+            cats_labels[cat] = sorted(entries)
+        except Exception as ex:  # Map to strings before sorting
+            cats_labels[cat] = list(sorted(map(str, entries)))
+            pass
+#        print(cat, cats_labels[cat])
 
     max_vals = 8
     if len(vals) > max_vals:
@@ -686,6 +691,8 @@ def load_file(filepath):
         print(message)
         show_info('File not loaded!', message)
         return  # Return, instead of completing the function
+
+#    print('Loaded', filepath)
 
     curdoc().clear()
     data_name = os.path.basename(filepath)
