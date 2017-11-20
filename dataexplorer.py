@@ -37,7 +37,8 @@ import pandas as pd
 import numpy as np
 import itertools
 import os
-from bokeh.layouts import widgetbox, gridplot, layout  # , row
+from bokeh.layouts import widgetbox, gridplot, layout  # , column
+from bokeh.layouts import row
 from bokeh.models.widgets import CheckboxButtonGroup, Select, Button
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput
@@ -358,13 +359,12 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     for cat in cats:
         labels = cats_labels[cat]  # Lables of current category
         active_list = list(range(0, len(labels)))  # All labels start active
-        cbg = CheckboxButtonGroup(labels=labels, active=active_list)
+        cbg = CheckboxButtonGroup(labels=labels, active=active_list, width=900)
         cbg_list.append(cbg)
 
         # Make the annotation for the CheckboxButtonGroup:
         div = Div(text='''<div style="text-align:right;font-size:12pt">
-                  '''+cat+''':
-                  </div>''', height=33)
+                  '''+cat+''':&nbsp; </div>''', width=250)
         div_list.append(div)
 
     for i, cbg in enumerate(cbg_list):
@@ -381,11 +381,16 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     sel.on_change('value', partial(update_colors, df=df,
                                    glyph_list=glyph_list))
 
-    # Put all the widgets in boxes, so they can be handled more easily:
-    wb1 = widgetbox(*div_list, width=200)
-    wb2 = widgetbox(*cbg_list, width=600)
-    wb3 = widgetbox(sel)
-    wb_list_1 = [wb1, wb2, wb3]
+    # Prepare the layout of the widgets:
+    # Create rows with pairs of Div() and CheckboxButtonGroup(), where the
+    # Div() contains the title. A list of those rows is combinded with a
+    # widgetbox of the Select widget.
+    row_list = zip(div_list, cbg_list)
+    div_and_cgb_cols = []
+    for row_new in row_list:
+        div_and_cgb_cols.append(row(*row_new))
+
+    wb_list_1 = [widgetbox(sel), div_and_cgb_cols]
 
     return wb_list_1
 
@@ -416,7 +421,7 @@ def create_widgets_2(filepath):
     text_input = TextInput(value=filepath,
                            title='Load this file (the server must have '
                            'access to the file):',
-                           width=600)
+                           width=1000)
 
     but_reload = Button(label='Load file', button_type='success')
     but_reload.on_click(partial(reload_file, text_input))
@@ -447,7 +452,11 @@ def create_data_table(source):
         columns.append(column)
 
     data_table = DataTable(source=source, columns=columns,
-                           width=1400, height=800)
+                           width=1400, height=800,
+                           editable=True,
+                           scroll_to_selection=False,
+                           sortable=True
+                           )
     return data_table
 
 
@@ -470,7 +479,7 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
     Return:
         None
     '''
-    layout_1 = layout(wb_list_1, grid)
+    layout_1 = layout([wb_list_1, grid])
     layout_2 = layout(data_table)
     layout_3 = layout(wb_list_2)
 
