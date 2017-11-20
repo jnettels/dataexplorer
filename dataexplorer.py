@@ -177,7 +177,7 @@ def create_dataexplorer_UI(df, filepath, data_name):
     wb_list_2 = create_widgets_2(filepath)
 
     # Create and get the DataTable for tab 3
-    data_table = create_data_table(source)
+    data_table = create_data_table(source, df)
 
     # Create a Bokeh "layout" from the widgets and grid of figures
     create_layout(wb_list_1, grid, wb_list_2, data_table, data_name)
@@ -292,9 +292,9 @@ def create_plots(df, cats_labels, vals, colour_cat):
     for permutation in permutation_list:
         x_val = permutation[0]
         y_val = permutation[1]
-        if x_val == 'Time':
+        if df[x_val].dtype == 'datetime64[ns]':
             p = figure(**plot_size_and_tools, x_axis_type='datetime')
-        elif y_val == 'Time':
+        elif df[y_val].dtype == 'datetime64[ns]':
             p = figure(**plot_size_and_tools, y_axis_type='datetime')
         else:
             p = figure(**plot_size_and_tools)
@@ -431,7 +431,7 @@ def create_widgets_2(filepath):
     return wb_list_2
 
 
-def create_data_table(source):
+def create_data_table(source, df):
     '''Create and return the DataTable widget for tab 3.
 
     Args:
@@ -444,7 +444,7 @@ def create_data_table(source):
     columns = []
 
     for name in source.column_names[:-1]:  # Skip the last entry (index)
-        if name == 'Time':
+        if df[name].dtype == 'datetime64[ns]':
             column = TableColumn(field=name, title=name,
                                  formatter=DateFormatter())
         else:
