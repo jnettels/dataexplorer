@@ -37,14 +37,14 @@ import pandas as pd
 import numpy as np
 import itertools
 import os
-from bokeh.layouts import widgetbox, gridplot, layout  # , column
+from bokeh.layouts import widgetbox, gridplot, layout, column
 from bokeh.layouts import row
 from bokeh.models.widgets import CheckboxButtonGroup, Select, Button
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput
 from bokeh.models import ColumnDataSource, CategoricalColorMapper
-# from bokeh.models import Legend, CDSView, GroupFilter
-# from bokeh.models import Circle
+# from bokeh.models import CDSView, BooleanFilter, GroupFilter
+# from bokeh.models import Circle, Legend
 # from bokeh.server.connection import ServerConnection
 from bokeh.plotting import figure
 from bokeh.palettes import Spectral10 as palette
@@ -257,16 +257,9 @@ def create_plots(df, cats_labels, vals, colour_cat):
         source (ColumnDataSource) : Bokeh's data format.
 
     '''
-    source = ColumnDataSource(data=df)
+    source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
 
-    # The 'view' function seemed useful, but may not be flexible enough
-#    source_filters = [
-#                      GroupFilter(column_name='Cat1', group='A'),
-#                      GroupFilter(column_name='Cat2', group='First'),
-#                      ]
-#
-#    view = CDSView(source=source,
-#                   filters=source_filters)
+#    view = CDSView(source=source, filters=[])  # Create an empty view object
 
     plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
                                      'lasso_select', 'box_select',
@@ -316,7 +309,10 @@ def create_plots(df, cats_labels, vals, colour_cat):
     # figures
     n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))
     # Create the final grid of figures
-    grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right')
+    grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right',
+                    css_classes=['scrollable'],
+#                    sizing_mode='fixed', height=600, width=800,
+                    )
 
     return grid, glyph_list, source
 
@@ -363,18 +359,17 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
         cbg_list.append(cbg)
 
         # Make the annotation for the CheckboxButtonGroup:
-        div = Div(text='''<div style="text-align:right;font-size:12pt">
-                  '''+cat+''':&nbsp; </div>''', width=250)
+        div = Div(text='''<div style="text-align:right; font-size:12pt;
+                  border:6px solid transparent">'''+cat+''':</div>''',
+                  width=250)
         div_list.append(div)
 
     for i, cbg in enumerate(cbg_list):
         # We need the update_filter function to know who calls it, so we use
         # the "partial" function to transport that information
         cbg.on_click(partial(update_filters, caller=i, cats=cats,
-                             cats_labels=cats_labels,
-                             filter_list=filter_list, filter_true=filter_true,
-                             df=df, source=source
-                             ))
+                             cats_labels=cats_labels, filter_list=filter_list,
+                             filter_true=filter_true, df=df, source=source))
 
     sel = Select(title='Category label for colours:', value=colour_cat,
                  options=cats)
@@ -585,6 +580,14 @@ def update_filters(active, caller, cats, cats_labels,
     # Once the "source" changes, the figures and glyphs update automagically,
     # thanks to Bokeh's magic.
     source.data = source_new.data
+
+    # The 'view' function seemed useful, but may not be flexible enough:
+    # - Filtering one "column_name" for multiple "group"s seems not possible
+    # - Changing the view did not seem to affect the DataTable
+#    view.filters = [GroupFilter(column_name='Category Label 1', group='A'),
+#                    GroupFilter(column_name='Category Label 2', group='First')
+#                    ]
+#    view.filters = [BooleanFilter(filter_combined)]
 
 
 def update_colors(attr, old, new, df, glyph_list):
