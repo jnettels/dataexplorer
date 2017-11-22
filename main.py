@@ -37,7 +37,8 @@ import pandas as pd
 import numpy as np
 import itertools
 import os
-from bokeh.layouts import widgetbox, gridplot, layout, column
+from bokeh.layouts import widgetbox, gridplot, layout
+# from bokeh.layouts import column
 from bokeh.layouts import row
 from bokeh.models.widgets import CheckboxButtonGroup, Select, Button
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
@@ -257,6 +258,11 @@ def create_plots(df, cats_labels, vals, colour_cat):
         source (ColumnDataSource) : Bokeh's data format.
 
     '''
+    # Set the colours as a column of the DataFrame:
+    colourmap = get_colourmap(cats_labels[colour_cat])
+    colour_list = [colourmap[x] for x in df[colour_cat]]
+    df['Colours'] = colour_list
+
     source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
 
 #    view = CDSView(source=source, filters=[])  # Create an empty view object
@@ -270,9 +276,9 @@ def create_plots(df, cats_labels, vals, colour_cat):
                            'lod_factor': 1000,  # level-of-detail decimation
                            }
 
-    bokeh_colormap = CategoricalColorMapper(palette=palette,
-                                            factors=cats_labels[colour_cat])
-    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
+#    bokeh_colormap = CategoricalColorMapper(palette=palette,
+#                                            factors=cats_labels[colour_cat])
+#    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
 
     # A choice of combinatoric generators with decending number of results:
 #    permutation_list = itertools.product(vals, repeat=2)
@@ -293,7 +299,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
             p = figure(**plot_size_and_tools)
 
         glyph = p.circle(x=x_val, y=y_val, source=source,
-                         legend=colour_cat, color=colour_def,
+                         legend=colour_cat, color='Colours',
                          )
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
@@ -374,7 +380,8 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     sel = Select(title='Category label for colours:', value=colour_cat,
                  options=cats)
     sel.on_change('value', partial(update_colors, df=df,
-                                   glyph_list=glyph_list))
+                                   glyph_list=glyph_list,
+                                   cats_labels=cats_labels, source=source))
 
     # Prepare the layout of the widgets:
     # Create rows with pairs of Div() and CheckboxButtonGroup(), where the
@@ -438,7 +445,7 @@ def create_data_table(source, df):
     '''
     columns = []
 
-    for name in source.column_names[:-1]:  # Skip the last entry (index)
+    for name in source.column_names[:-2]:  # Skip 'index' and 'Colours'
         if df[name].dtype == 'datetime64[ns]':
             column = TableColumn(field=name, title=name,
                                  formatter=DateFormatter())
@@ -447,7 +454,9 @@ def create_data_table(source, df):
         columns.append(column)
 
     data_table = DataTable(source=source, columns=columns,
-                           width=1400, height=800,
+                           fit_columns=True,
+                           width=1400,
+                           height=800,
                            editable=True,
                            scroll_to_selection=False,
                            sortable=True
@@ -590,7 +599,7 @@ def update_filters(active, caller, cats, cats_labels,
 #    view.filters = [BooleanFilter(filter_combined)]
 
 
-def update_colors(attr, old, new, df, glyph_list):
+def update_colors(attr, old, new, df, glyph_list, cats_labels, source):
     '''Function associated with the colour category dropdown menu widget.
     The selected colour category label becomes the new "colour_cat". Based on
     that the Bokeh colourmap is regenerated and applied to all the glyphs.
@@ -611,12 +620,19 @@ def update_colors(attr, old, new, df, glyph_list):
 
     '''
     colour_cat = new
-    bokeh_colormap = CategoricalColorMapper(palette=palette,
-                                            factors=list(set(df[colour_cat])))
-    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
-    for gly in glyph_list:
-        gly.glyph.fill_color = colour_def
-        gly.glyph.line_color = colour_def
+#    bokeh_colormap = CategoricalColorMapper(palette=palette,
+#                                            factors=list(set(df[colour_cat])))
+#    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
+#    for gly in glyph_list:
+#        gly.glyph.fill_color = colour_def
+#        gly.glyph.line_color = colour_def
+
+    '''
+    Alternative way: 'Colours' is a column of both the DataFrame and the source
+    '''
+    colourmap = get_colourmap(cats_labels[colour_cat])
+    df['Colours'] = [colourmap[x] for x in df[colour_cat]]
+    source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
     '''
     Test for modifying legend
@@ -647,6 +663,26 @@ def update_colors(attr, old, new, df, glyph_list):
 #                                legend=colour_cat,
 #                                )
 #                         )
+
+
+def get_colourmap(categories):
+    '''This function creates a dictionary of categories and their colours. It
+    handles the possible exception thrown when the palette is not long enough.
+
+    Args:
+        categories (List) : List of categories.
+
+    Return:
+        colourmap (Dict) : Dictionary of categories and their colours.
+
+    '''
+    colourmap = dict()
+    for i, cat in enumerate(categories):
+        try:
+            colourmap[cat] = palette[i]
+        except Exception:
+            colourmap[cat] = 'grey'
+    return colourmap
 
 
 def load_file_dialog():
@@ -685,7 +721,7 @@ def reload_file(text_input):
     text_input widget for its current value and hands that to load_file().
 
     Args:
-        text_input (TextInput) : Bokeh widget
+        text_input (TextInput) : Bokeh widget.
 
     Return:
         None
