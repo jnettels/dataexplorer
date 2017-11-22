@@ -1,0 +1,271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module dataexplorer</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>dataexplorer</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:c%3A%5Cusers%5Cnettelstroth%5Cdocuments%5C07%20python%5Cdataexplorer%5Cdataexplorer.py">c:\users\nettelstroth\documents\07 python\dataexplorer\dataexplorer.py</a></font></td></tr></table>
+    <p><tt>Created&nbsp;on&nbsp;Fri&nbsp;Nov&nbsp;&nbsp;3&nbsp;08:10:21&nbsp;2017<br>
+&nbsp;<br>
+@author:&nbsp;Joris&nbsp;Nettelstroth<br>
+&nbsp;<br>
+The&nbsp;DataExplorer&nbsp;should&nbsp;help&nbsp;you&nbsp;explore&nbsp;correlations&nbsp;within&nbsp;your&nbsp;data.&nbsp;It<br>
+features&nbsp;a&nbsp;user&nbsp;interface&nbsp;that&nbsp;shows&nbsp;scatter&nbsp;plots&nbsp;of&nbsp;all&nbsp;the&nbsp;variables&nbsp;in<br>
+your&nbsp;data.&nbsp;Categories&nbsp;found&nbsp;in&nbsp;your&nbsp;data&nbsp;can&nbsp;be&nbsp;used&nbsp;to&nbsp;filter&nbsp;the&nbsp;views.<br>
+&nbsp;<br>
+You&nbsp;can&nbsp;start&nbsp;this&nbsp;program&nbsp;with&nbsp;the&nbsp;"start_bokeh.cmd"&nbsp;batch&nbsp;file.<br>
+&nbsp;<br>
+Alternatively,&nbsp;you&nbsp;can&nbsp;start&nbsp;it&nbsp;with&nbsp;your&nbsp;own&nbsp;command&nbsp;prompt&nbsp;in&nbsp;Windows:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Go&nbsp;to&nbsp;Start&nbsp;and&nbsp;type&nbsp;"cmd"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Select&nbsp;"Eingabeaufforderung"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Change&nbsp;directory&nbsp;to&nbsp;the&nbsp;folder&nbsp;containing&nbsp;the&nbsp;script&nbsp;by&nbsp;typing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"cd&nbsp;path/to/folder"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Start&nbsp;a&nbsp;Bokeh&nbsp;server&nbsp;running&nbsp;this&nbsp;script&nbsp;by&nbsp;typing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"bokeh&nbsp;serve&nbsp;dataexplorer.py&nbsp;--show"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Your&nbsp;webbrowser&nbsp;should&nbsp;open&nbsp;and&nbsp;display&nbsp;the&nbsp;interface&nbsp;of&nbsp;the&nbsp;program<br>
+&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;Hit&nbsp;the&nbsp;button&nbsp;to&nbsp;load&nbsp;your&nbsp;own&nbsp;Excel&nbsp;file<br>
+&nbsp;<br>
+If&nbsp;you&nbsp;do&nbsp;not&nbsp;yet&nbsp;have&nbsp;Python&nbsp;and&nbsp;Bokeh&nbsp;installed,&nbsp;the&nbsp;easiest&nbsp;way&nbsp;to&nbsp;do&nbsp;that<br>
+is&nbsp;by&nbsp;downloading&nbsp;and&nbsp;installing&nbsp;"Anaconda"&nbsp;from&nbsp;here:<br>
+https://www.anaconda.com/download/<br>
+Its&nbsp;a&nbsp;package&nbsp;manager&nbsp;that&nbsp;distributes&nbsp;Python&nbsp;with&nbsp;data&nbsp;science&nbsp;packages.<br>
+&nbsp;<br>
+During&nbsp;installation,&nbsp;please&nbsp;allow&nbsp;to&nbsp;add&nbsp;variables&nbsp;to&nbsp;$PATH&nbsp;(or&nbsp;to&nbsp;that<br>
+manually&nbsp;afterwards.)&nbsp;This&nbsp;allows&nbsp;Bokeh&nbsp;to&nbsp;be&nbsp;started&nbsp;from&nbsp;everywhere,&nbsp;which<br>
+is&nbsp;required&nbsp;for&nbsp;the&nbsp;batch&nbsp;file&nbsp;to&nbsp;work.<br>
+&nbsp;<br>
+TODO&nbsp;Import&nbsp;palettes&nbsp;with&nbsp;more&nbsp;colours&nbsp;/&nbsp;use&nbsp;different&nbsp;markers?</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="tkinter.filedialog.html">tkinter.filedialog</a><br>
+<a href="itertools.html">itertools</a><br>
+</td><td width="25%" valign=top><a href="tkinter.messagebox.html">tkinter.messagebox</a><br>
+<a href="numpy.html">numpy</a><br>
+</td><td width="25%" valign=top><a href="os.html">os</a><br>
+<a href="pandas.html">pandas</a><br>
+</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-analyse_dataframe"><strong>analyse_dataframe</strong></a>(df)</dt><dd><tt>Analyse&nbsp;a&nbsp;given&nbsp;DataFrame&nbsp;to&nbsp;seperate&nbsp;the&nbsp;columns&nbsp;in&nbsp;categories&nbsp;and<br>
+values.&nbsp;"Object"&nbsp;columns&nbsp;become&nbsp;categories,&nbsp;their&nbsp;column&nbsp;names&nbsp;are&nbsp;saved<br>
+as&nbsp;category&nbsp;labels.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;df&nbsp;(Pandas&nbsp;DataFrame)&nbsp;:&nbsp;The&nbsp;input&nbsp;data&nbsp;we&nbsp;want&nbsp;to&nbsp;explore.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cats&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;the&nbsp;column&nbsp;names&nbsp;that&nbsp;contain&nbsp;categories.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cats_labels&nbsp;(Dict)&nbsp;:&nbsp;Dictionary&nbsp;containing&nbsp;the&nbsp;categories&nbsp;associated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with&nbsp;each&nbsp;label.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;vals&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;the&nbsp;column&nbsp;names&nbsp;that&nbsp;contain&nbsp;values.</tt></dd></dl>
+ <dl><dt><a name="-create_data_table"><strong>create_data_table</strong></a>(source, df)</dt><dd><tt>Create&nbsp;and&nbsp;return&nbsp;the&nbsp;DataTable&nbsp;widget&nbsp;for&nbsp;tab&nbsp;3.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;source&nbsp;(ColumnDataSource)&nbsp;:&nbsp;The&nbsp;Bokeh&nbsp;source&nbsp;object<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data_table&nbsp;(DataTable)&nbsp;:&nbsp;Bokeh&nbsp;DataTable&nbsp;widget.</tt></dd></dl>
+ <dl><dt><a name="-create_dataexplorer_UI"><strong>create_dataexplorer_UI</strong></a>(df, filepath, data_name)</dt><dd><tt>Performs&nbsp;all&nbsp;the&nbsp;tasks&nbsp;necessary&nbsp;to&nbsp;create&nbsp;the&nbsp;Data&nbsp;Explorer&nbsp;user<br>
+interface&nbsp;by&nbsp;calling&nbsp;the&nbsp;required&nbsp;functions.&nbsp;It&nbsp;is&nbsp;also&nbsp;used&nbsp;to&nbsp;recreate<br>
+the&nbsp;UI&nbsp;when&nbsp;new&nbsp;data&nbsp;is&nbsp;loaded.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;df&nbsp;(Pandas&nbsp;DataFrame)&nbsp;:&nbsp;The&nbsp;input&nbsp;data&nbsp;we&nbsp;want&nbsp;to&nbsp;explore.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;filepath&nbsp;(str)&nbsp;:&nbsp;Path&nbsp;to&nbsp;file&nbsp;to&nbsp;load.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data_name&nbsp;(str)&nbsp;:&nbsp;The&nbsp;(file)name&nbsp;of&nbsp;the&nbsp;current&nbsp;data&nbsp;set.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-create_layout"><strong>create_layout</strong></a>(wb_list_1, grid, wb_list_2, data_table, data_name)</dt><dd><tt>Create&nbsp;a&nbsp;Bokeh&nbsp;"layouts"&nbsp;from&nbsp;the&nbsp;widgetboxes&nbsp;and&nbsp;grid&nbsp;of&nbsp;figures.<br>
+The&nbsp;layouts&nbsp;are&nbsp;organized&nbsp;into&nbsp;tabs&nbsp;and&nbsp;those&nbsp;are&nbsp;added&nbsp;as&nbsp;"root"&nbsp;to&nbsp;the<br>
+current&nbsp;Bokeh&nbsp;document.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wb_list_1&nbsp;(List)&nbsp;:&nbsp;A&nbsp;list&nbsp;of&nbsp;widgetboxes,&nbsp;each&nbsp;containing&nbsp;widgets.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;grid&nbsp;(Gridplot)&nbsp;:&nbsp;Grid&nbsp;containing&nbsp;all&nbsp;created&nbsp;figures.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wb_list_2&nbsp;(List)&nbsp;:&nbsp;A&nbsp;list&nbsp;of&nbsp;widgetboxes,&nbsp;each&nbsp;containing&nbsp;widgets.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data_table&nbsp;(DataTable)&nbsp;:&nbsp;Bokeh&nbsp;DataTable&nbsp;widget.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data_name&nbsp;(str)&nbsp;:&nbsp;The&nbsp;(file)name&nbsp;of&nbsp;the&nbsp;current&nbsp;data&nbsp;set.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-create_plots"><strong>create_plots</strong></a>(df, cats_labels, vals, colour_cat)</dt><dd><tt>Use&nbsp;Bokeh&nbsp;to&nbsp;plot&nbsp;the&nbsp;data&nbsp;in&nbsp;an&nbsp;interactive&nbsp;way.&nbsp;The&nbsp;Bokeh&nbsp;settings<br>
+are&nbsp;defined&nbsp;in&nbsp;this&nbsp;function,&nbsp;as&nbsp;well&nbsp;as&nbsp;the&nbsp;combinatoric&nbsp;generator&nbsp;which<br>
+generates&nbsp;the&nbsp;combinations&nbsp;of&nbsp;all&nbsp;the&nbsp;"vals".&nbsp;For&nbsp;each&nbsp;combination,&nbsp;a<br>
+figure&nbsp;is&nbsp;created&nbsp;and&nbsp;all&nbsp;of&nbsp;those&nbsp;figures&nbsp;are&nbsp;combined&nbsp;into&nbsp;one&nbsp;grid.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;df&nbsp;(Pandas&nbsp;DataFrame)&nbsp;:&nbsp;The&nbsp;input&nbsp;data&nbsp;we&nbsp;want&nbsp;to&nbsp;explore.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cats_labels&nbsp;(Dict)&nbsp;:&nbsp;Dictionary&nbsp;containing&nbsp;the&nbsp;categories&nbsp;associated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with&nbsp;each&nbsp;label.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;vals&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;the&nbsp;column&nbsp;names&nbsp;that&nbsp;contain&nbsp;values.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;colour_cat&nbsp;(str)&nbsp;:&nbsp;Name&nbsp;of&nbsp;the&nbsp;current&nbsp;colour&nbsp;category&nbsp;label.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;grid&nbsp;(Gridplot)&nbsp;:&nbsp;Grid&nbsp;containing&nbsp;all&nbsp;created&nbsp;figures.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;glyph_list&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;all&nbsp;used&nbsp;glyphs.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;source&nbsp;(ColumnDataSource)&nbsp;:&nbsp;Bokeh's&nbsp;data&nbsp;format.</tt></dd></dl>
+ <dl><dt><a name="-create_test_data"><strong>create_test_data</strong></a>()</dt><dd><tt>Create&nbsp;some&nbsp;test&nbsp;data.&nbsp;Includes&nbsp;sin,&nbsp;cos&nbsp;and&nbsp;some&nbsp;random&nbsp;numbers.&nbsp;The<br>
+amount&nbsp;of&nbsp;data&nbsp;is&nbsp;hardcoded&nbsp;and&nbsp;controlled&nbsp;with&nbsp;the&nbsp;number&nbsp;of&nbsp;time&nbsp;steps.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;df&nbsp;(Pandas&nbsp;DataFrame)&nbsp;:&nbsp;An&nbsp;example&nbsp;set&nbsp;of&nbsp;test&nbsp;data.</tt></dd></dl>
+ <dl><dt><a name="-create_widgets_1"><strong>create_widgets_1</strong></a>(cats, cats_labels, colour_cat, filter_list, filter_true, df, source, glyph_list)</dt><dd><tt>Create&nbsp;and&nbsp;return&nbsp;a&nbsp;list&nbsp;of&nbsp;the&nbsp;widgets&nbsp;for&nbsp;tab&nbsp;1.&nbsp;There&nbsp;are&nbsp;two&nbsp;types<br>
+of&nbsp;widgets:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1.&nbsp;CheckboxButtonGroup:&nbsp;Used&nbsp;to&nbsp;toggle&nbsp;the&nbsp;category&nbsp;filters<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.&nbsp;Select:&nbsp;A&nbsp;dropdown&nbsp;menu&nbsp;used&nbsp;to&nbsp;define&nbsp;the&nbsp;current&nbsp;colour&nbsp;category<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.&nbsp;Button:&nbsp;Used&nbsp;to&nbsp;load&nbsp;a&nbsp;new&nbsp;file&nbsp;and&nbsp;then&nbsp;rebuild&nbsp;the&nbsp;whole&nbsp;layout<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Basically&nbsp;everything...<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wb_list_1&nbsp;(List)&nbsp;:&nbsp;A&nbsp;list&nbsp;of&nbsp;widgetboxes,&nbsp;each&nbsp;containing&nbsp;widgets.</tt></dd></dl>
+ <dl><dt><a name="-create_widgets_2"><strong>create_widgets_2</strong></a>(filepath)</dt><dd><tt>Create&nbsp;and&nbsp;return&nbsp;a&nbsp;list&nbsp;of&nbsp;the&nbsp;widgets&nbsp;for&nbsp;tab&nbsp;2.&nbsp;There&nbsp;are&nbsp;three<br>
+types&nbsp;of&nbsp;widgets:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1.&nbsp;Button:&nbsp;Used&nbsp;to&nbsp;load&nbsp;a&nbsp;new&nbsp;file&nbsp;and&nbsp;then&nbsp;rebuild&nbsp;the&nbsp;whole&nbsp;layout<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.&nbsp;Div:&nbsp;Print&nbsp;text<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.&nbsp;TextInput:&nbsp;Field&nbsp;for&nbsp;user&nbsp;input<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;filepath&nbsp;(str)&nbsp;:&nbsp;Path&nbsp;to&nbsp;file&nbsp;to&nbsp;load.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;wb_list_2&nbsp;(List)&nbsp;:&nbsp;A&nbsp;list&nbsp;of&nbsp;widgetboxes,&nbsp;each&nbsp;containing&nbsp;widgets.</tt></dd></dl>
+ <dl><dt><a name="-get_colourmap"><strong>get_colourmap</strong></a>(categories)</dt><dd><tt>This&nbsp;function&nbsp;creates&nbsp;a&nbsp;dictionary&nbsp;of&nbsp;categories&nbsp;and&nbsp;their&nbsp;colours.&nbsp;It<br>
+handles&nbsp;the&nbsp;possible&nbsp;exception&nbsp;thrown&nbsp;when&nbsp;the&nbsp;palette&nbsp;is&nbsp;not&nbsp;long&nbsp;enough.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;categories&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;categories.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;colourmap&nbsp;(Dict)&nbsp;:&nbsp;Dictionary&nbsp;of&nbsp;categories&nbsp;and&nbsp;their&nbsp;colours.</tt></dd></dl>
+ <dl><dt><a name="-load_file"><strong>load_file</strong></a>(filepath)</dt><dd><tt>The&nbsp;chosen&nbsp;file&nbsp;is&nbsp;read&nbsp;into&nbsp;a&nbsp;Pandas&nbsp;DataFrame.&nbsp;In&nbsp;order<br>
+to&nbsp;regenerate&nbsp;all&nbsp;widgets&nbsp;and&nbsp;figures,&nbsp;the&nbsp;current&nbsp;Bokeh&nbsp;dokument&nbsp;has&nbsp;to<br>
+be&nbsp;"cleared".&nbsp;Then&nbsp;<a href="#-create_dataexplorer_UI">create_dataexplorer_UI</a>()&nbsp;is&nbsp;called&nbsp;which&nbsp;will&nbsp;add&nbsp;a<br>
+new&nbsp;root&nbsp;to&nbsp;the&nbsp;empty&nbsp;document.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;filepath&nbsp;(str)&nbsp;:&nbsp;Path&nbsp;to&nbsp;file&nbsp;to&nbsp;load.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-load_file_dialog"><strong>load_file_dialog</strong></a>()</dt><dd><tt>This&nbsp;function&nbsp;is&nbsp;triggered&nbsp;by&nbsp;the&nbsp;"load&nbsp;new&nbsp;file"&nbsp;button&nbsp;and&nbsp;presents<br>
+a&nbsp;file&nbsp;dialog.&nbsp;The&nbsp;user&nbsp;choice&nbsp;is&nbsp;handed&nbsp;to&nbsp;the&nbsp;<a href="#-load_file">load_file</a>()&nbsp;function.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-prepare_filter"><strong>prepare_filter</strong></a>(cats, cats_labels, df)</dt><dd><tt>Prepare&nbsp;the&nbsp;filters&nbsp;used&nbsp;to&nbsp;explore&nbsp;the&nbsp;data.&nbsp;A&nbsp;filter&nbsp;is&nbsp;a&nbsp;list&nbsp;of<br>
+boolean&nbsp;values.&nbsp;Each&nbsp;category&nbsp;label&nbsp;needs&nbsp;its&nbsp;own&nbsp;filter.&nbsp;The&nbsp;filters&nbsp;start<br>
+all&nbsp;'True'&nbsp;and&nbsp;will&nbsp;be&nbsp;modified&nbsp;later,&nbsp;based&nbsp;on&nbsp;the&nbsp;user&nbsp;input.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cats&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;the&nbsp;column&nbsp;names&nbsp;that&nbsp;contain&nbsp;categories.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cats_labels&nbsp;(Dict)&nbsp;:&nbsp;Dictionary&nbsp;containing&nbsp;the&nbsp;categories&nbsp;associated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with&nbsp;each&nbsp;label.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;df&nbsp;(Pandas&nbsp;DataFrame)&nbsp;:&nbsp;The&nbsp;input&nbsp;data&nbsp;we&nbsp;want&nbsp;to&nbsp;explore.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;filter_list&nbsp;(List)&nbsp;:&nbsp;List&nbsp;containing&nbsp;all&nbsp;the&nbsp;filters,&nbsp;one&nbsp;for&nbsp;each<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;category.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;filter_true&nbsp;(List)&nbsp;:&nbsp;A&nbsp;list&nbsp;with&nbsp;the&nbsp;length&nbsp;of&nbsp;one&nbsp;column,&nbsp;where&nbsp;all<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;entries&nbsp;are&nbsp;"True".</tt></dd></dl>
+ <dl><dt><a name="-reload_file"><strong>reload_file</strong></a>(text_input)</dt><dd><tt>This&nbsp;function&nbsp;is&nbsp;triggered&nbsp;by&nbsp;the&nbsp;"load&nbsp;file"&nbsp;button.&nbsp;It&nbsp;asks&nbsp;the<br>
+text_input&nbsp;widget&nbsp;for&nbsp;its&nbsp;current&nbsp;value&nbsp;and&nbsp;hands&nbsp;that&nbsp;to&nbsp;<a href="#-load_file">load_file</a>().<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;text_input&nbsp;(TextInput)&nbsp;:&nbsp;Bokeh&nbsp;widget.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-show_info"><strong>show_info</strong></a>(title, message)</dt><dd><tt>Shows&nbsp;a&nbsp;notification&nbsp;window&nbsp;with&nbsp;given&nbsp;title&nbsp;and&nbsp;message.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;title&nbsp;(str)&nbsp;:&nbsp;Title&nbsp;of&nbsp;window.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;message&nbsp;(str)&nbsp;:&nbsp;message&nbsp;text.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-update_colors"><strong>update_colors</strong></a>(attr, old, new, df, glyph_list, cats_labels, source)</dt><dd><tt>Function&nbsp;associated&nbsp;with&nbsp;the&nbsp;colour&nbsp;category&nbsp;dropdown&nbsp;menu&nbsp;widget.<br>
+The&nbsp;selected&nbsp;colour&nbsp;category&nbsp;label&nbsp;becomes&nbsp;the&nbsp;new&nbsp;"colour_cat".&nbsp;Based&nbsp;on<br>
+that&nbsp;the&nbsp;Bokeh&nbsp;colourmap&nbsp;is&nbsp;regenerated&nbsp;and&nbsp;applied&nbsp;to&nbsp;all&nbsp;the&nbsp;glyphs.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;attr&nbsp;(str)&nbsp;:&nbsp;The&nbsp;widget's&nbsp;attribute&nbsp;that&nbsp;is&nbsp;told&nbsp;about&nbsp;in&nbsp;old&nbsp;and&nbsp;new<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;old&nbsp;(str)&nbsp;:&nbsp;Previously&nbsp;selected&nbsp;colour&nbsp;category&nbsp;label.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;new&nbsp;(str)&nbsp;:&nbsp;Selected&nbsp;colour&nbsp;category&nbsp;label.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;df&nbsp;(Pandas&nbsp;DataFrame)&nbsp;:&nbsp;The&nbsp;input&nbsp;data&nbsp;we&nbsp;want&nbsp;to&nbsp;explore.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;glyph_list&nbsp;(List)&nbsp;:&nbsp;List&nbsp;of&nbsp;all&nbsp;used&nbsp;glyphs.<br>
+&nbsp;<br>
+Return:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+ <dl><dt><a name="-update_filters"><strong>update_filters</strong></a>(active, caller, cats, cats_labels, filter_list, filter_true, df, source)</dt><dd><tt>Function&nbsp;associated&nbsp;with&nbsp;the&nbsp;CheckboxButtonGroups&nbsp;(CBG).&nbsp;Each&nbsp;CBG&nbsp;has<br>
+one&nbsp;corresponding&nbsp;filter&nbsp;(which&nbsp;belongs&nbsp;to&nbsp;one&nbsp;category&nbsp;label).&nbsp;The&nbsp;calling<br>
+CBG&nbsp;identifies&nbsp;itself&nbsp;with&nbsp;the&nbsp;"caller"&nbsp;argument.&nbsp;It&nbsp;delivers&nbsp;a&nbsp;list&nbsp;of&nbsp;the<br>
+positions&nbsp;of&nbsp;the&nbsp;buttons&nbsp;which&nbsp;are&nbsp;now&nbsp;active&nbsp;(after&nbsp;the&nbsp;user&nbsp;input).&nbsp;The<br>
+positions&nbsp;are&nbsp;translated&nbsp;into&nbsp;category&nbsp;strings&nbsp;(which&nbsp;are&nbsp;the&nbsp;button<br>
+labels).&nbsp;The&nbsp;filters&nbsp;are&nbsp;updated&nbsp;based&nbsp;on&nbsp;the&nbsp;selected&nbsp;categories&nbsp;and&nbsp;then<br>
+the&nbsp;DataFrame&nbsp;is&nbsp;filtered&nbsp;accordingly.&nbsp;Updating&nbsp;Bokeh's&nbsp;source&nbsp;object&nbsp;makes<br>
+all&nbsp;the&nbsp;figures&nbsp;update,&nbsp;as&nbsp;well.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;active&nbsp;(List)&nbsp;:&nbsp;A&nbsp;list&nbsp;of&nbsp;the&nbsp;positions&nbsp;of&nbsp;those&nbsp;buttons,&nbsp;which&nbsp;are<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;currently&nbsp;active.<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;caller&nbsp;(int)&nbsp;:&nbsp;Number&nbsp;of&nbsp;the&nbsp;ButtonGroup&nbsp;which&nbsp;is&nbsp;calling&nbsp;this&nbsp;function<br>
+&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;...&nbsp;and&nbsp;lots&nbsp;more<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;None</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>data_name</strong> = 'Test Data'<br>
+<strong>df</strong> =          Time Category Label 1 Category Label 2 ...59 -1.836970e-16           NaN  56  70  #66c2a5  <br>
+<strong>filepath</strong> = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer\excel_text.xlsx'<br>
+<strong>palette</strong> = ['#5e4fa2', '#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#fee08b', '#fdae61', '#f46d43', '#d53e4f', '#9e0142']</td></tr></table>
+</body></html>
