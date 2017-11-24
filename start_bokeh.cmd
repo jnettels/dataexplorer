@@ -11,7 +11,7 @@ echo This batch file starts a Bokeh server that can be accessed remotely.
 echo - For local access type "localhost/dataexplorer" in your browser.
 echo - For remote access type "%IP%/dataexplorer" in your browser.
 
-bokeh serve ../DataExplorer --show --allow-websocket-origin localhost:80 ^
+bokeh serve dataexplorer.py --show --allow-websocket-origin localhost:80 ^
  --allow-websocket-origin %ip%:80 --port 80 ^
  --log-level info
 
