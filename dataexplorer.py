@@ -40,22 +40,26 @@ import os
 from bokeh.layouts import widgetbox, gridplot, layout
 # from bokeh.layouts import column
 from bokeh.layouts import row
-from bokeh.models.widgets import CheckboxButtonGroup, Select, Button
+from bokeh.models.widgets import CheckboxButtonGroup, Select  # , Button
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput
-from bokeh.models import ColumnDataSource, CategoricalColorMapper
+from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
+from bokeh.models import CustomJS
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
 # from bokeh.models import Circle, Legend
 # from bokeh.server.connection import ServerConnection
 from bokeh.plotting import figure
-from bokeh.palettes import Spectral10 as palette
+from bokeh import palettes
 from bokeh.io import curdoc
 from functools import partial
-from tkinter import Tk, filedialog, messagebox
+# from tkinter import Tk, filedialog, messagebox
+import logging  # Print in a logging format, which Bokeh server uses
 
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
 # import socket
+
+from helpers import new_upload_button  # My own library of functions
 
 
 def create_test_data():
@@ -411,23 +415,45 @@ def create_widgets_2(filepath):
         wb_list_2 (List) : A list of widgetboxes, each containing widgets.
 
     '''
-    but_load_new = Button(label='Show file dialog', button_type='success')
-    but_load_new.on_click(load_file_dialog)
+    # First implementation
+#    but_load_new = Button(label='Show file dialog', button_type='success')
+#    but_load_new.on_click(load_file_dialog)
 
+#    div1 = Div(text='''<div>
+#                  Load a new file with a file dialog (only works if you run
+#                  this script locally)
+#                  </div>''', width=600)
+#    div2 = Div(text='''<div> </div>''', height=33, width=600)  # Empty text
+#
+#    text_input = TextInput(value=filepath,
+#                           title='Load this file (the server must have '
+#                           'access to the file):',
+#                           width=1000)
+#
+#    but_reload = Button(label='Load file', button_type='success')
+#    but_reload.on_click(partial(reload_file, text_input))
+#    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
+
+    # Second implementation
     div1 = Div(text='''<div>
-                  Load a new file with a file dialog (only works if you run
-                  this script locally)
+                  Load a new file with a file dialog
                   </div>''', width=600)
     div2 = Div(text='''<div> </div>''', height=33, width=600)  # Empty text
 
-    text_input = TextInput(value=filepath,
-                           title='Load this file (the server must have '
-                           'access to the file):',
-                           width=1000)
+    save_path = os.path.join(os.path.dirname(__file__), 'upload')
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    but_load_new = new_upload_button(save_path, load_file)
 
-    but_reload = Button(label='Load file', button_type='success')
-    but_reload.on_click(partial(reload_file, text_input))
-    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
+    global text_input
+    text_input = TextInput(value='',
+                           title='Latest (error) message',
+                           width=1000)
+    text_input.js_on_change('value', CustomJS(code="""
+        alert(cb_obj.value)
+        """))
+
+    wb = widgetbox(div1, but_load_new, div2, text_input)
     wb_list_2 = [wb]
 
     return wb_list_2
@@ -492,7 +518,8 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
     tab_3 = Panel(child=layout_3, title='Settings')
     tabs = Tabs(tabs=[tab_1, tab_2, tab_3])
 
-    curdoc().add_root(tabs)
+    curdoc().clear()  # Clear any previous document roots
+    curdoc().add_root(tabs)  # Add a new root to the document
     curdoc().title = 'DataExplorer: '+data_name
 
     # The children of a layout can be treated like a list:
@@ -677,9 +704,16 @@ def get_colourmap(categories):
 
     '''
     colourmap = dict()
+    palette = palettes.all_palettes['Category20'][20]
+#    palette = palettes.all_palettes['Spectral'][len(categories)]
+#    palette = palettes.all_palettes['Spectral'][11]
     for i, cat in enumerate(categories):
+        if i < 10:
+            j = 2*i  # Even numbers
+        else:
+            j = 2*(i-9)-1  # Odd numbers
         try:
-            colourmap[cat] = palette[i]
+            colourmap[cat] = palette[j]
         except Exception:
             colourmap[cat] = 'grey'
     return colourmap
@@ -733,9 +767,9 @@ def reload_file(text_input):
 
 def load_file(filepath):
     '''The chosen file is read into a Pandas DataFrame. In order
-    to regenerate all widgets and figures, the current Bokeh dokument has to
-    be "cleared". Then create_dataexplorer_UI() is called which will add a
-    new root to the empty document.
+    to regenerate all widgets and figures, create_dataexplorer_UI() is called.
+    This finishes with calling create_layout(), which "cleares" the current
+    Bokeh dokument and adds a new root to the empty document.
 
     Args:
         filepath (str) : Path to file to load.
@@ -747,19 +781,17 @@ def load_file(filepath):
     if len(filepath) == 0:  # No file selected, or file dialog cancelled
         return  # Return, instead of completing the function
 
-    print('Trying to load', filepath)
+    logging.info('Trying to open file: ' + filepath)
     try:
         df = pd.read_excel(filepath)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up messagebox:
-        message = 'File not loaded: '+filepath+'\n'+str(ex)
-        print(message)
+        message = 'File not loaded: '+filepath+' \n'+str(ex)
         show_info('File not loaded!', message)
         return  # Return, instead of completing the function
 
 #    print('Loaded', filepath)
 
-    curdoc().clear()
     data_name = os.path.basename(filepath)
     create_dataexplorer_UI(df, filepath, data_name)
 
@@ -776,9 +808,15 @@ def show_info(title, message):
         None
 
     '''
-    root = Tk()
-    root.withdraw()  # Important: Hides the empty 'root' window
-    messagebox.showinfo(title, message)
+#    root = Tk()
+#    root.withdraw()  # Important: Hides the empty 'root' window
+#    messagebox.showinfo(title, message)
+    global text_input
+    try:  # The text_input widget may not have been created yet
+        text_input.value = message
+    except Exception:
+        pass
+    logging.info(message)  # Bokeh's server logging funtion
 
 
 '''
