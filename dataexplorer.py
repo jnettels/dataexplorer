@@ -20,12 +20,15 @@ Alternatively, you can start it with your own command prompt in Windows:
     - Your webbrowser should open and display the interface of the program
     - Hit the button to load your own Excel file
 
+The file excel_example.xlsx shows the required input format and gives hints
+about the usage.
+
 If you do not yet have Python and Bokeh installed, the easiest way to do that
 is by downloading and installing "Anaconda" from here:
 https://www.anaconda.com/download/
 Its a package manager that distributes Python with data science packages.
 
-During installation, please allow to add variables to $PATH (or to that
+During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
@@ -69,7 +72,7 @@ def create_test_data():
         df (Pandas DataFrame) : An example set of test data.
     '''
 
-    time_steps = 10  # Control the amount of test data
+    time_steps = 100  # Control the amount of test data
 
     new_index = pd.date_range(start=pd.to_datetime('today'),
                               periods=time_steps, freq='D')
@@ -299,7 +302,10 @@ def create_plots(df, cats_labels, vals, colour_cat):
             p = figure(**plot_size_and_tools)
 
         glyph = p.circle(x=x_val, y=y_val, source=source,
-                         legend=colour_cat, color='Colours',
+                         legend=colour_cat,
+                         color='Colours',
+                         fill_alpha=0.2,
+                         size=5
                          )
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
@@ -312,13 +318,12 @@ def create_plots(df, cats_labels, vals, colour_cat):
 #        p.legend.items = LegendItem=[('test', [glyph])]
 
     # Get the number of grid columns from the rounded square root of number of
-    # figures
-    n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))
+    # figures. But only use a maximum of 6 columns.
+#    n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0)))
+    n_grid_cols = min(6, int((np.sqrt(len(fig_list)))) + 1)
     # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right',
-                    css_classes=['scrollable'],
-#                    sizing_mode='fixed', height=600, width=800,
-                    )
+                    css_classes=['scrollable'])
 
     return grid, glyph_list, source
 
