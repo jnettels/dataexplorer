@@ -48,7 +48,6 @@ from bokeh.models.widgets import Panel, Tabs, TextInput
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
 from bokeh.models import CustomJS
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
-# from bokeh.models import Circle, Legend
 from bokeh.plotting import figure
 from bokeh import palettes
 from bokeh.io import curdoc
@@ -179,6 +178,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
     # Set the colours as a column of the DataFrame:
     colourmap = get_colourmap(cats_labels[colour_cat])
     colour_list = [colourmap[x] for x in df[colour_cat]]
+    df['Legend'] = df[colour_cat]
     df['Colours'] = colour_list
 
     source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
@@ -217,7 +217,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
             p = figure(**plot_size_and_tools)
 
         glyph = p.circle(x=x_val, y=y_val, source=source,
-                         legend=colour_cat,
+                         legend='Legend',
                          color='Colours',
                          fill_alpha=0.2,
                          size=5
@@ -229,36 +229,41 @@ def create_plots(df, cats_labels, vals, colour_cat):
         p.legend.click_policy = "hide"
         fig_list.append(p)
         glyph_list.append(glyph)
-#        p.legend.items = Legend(items=[('test', [glyph])])
-#        p.legend.items = LegendItem=[('test', [glyph])]
+
+    '''
+    The plots are completed, now we add a figure for the legend. Here we remove
+    everything but the legend itself. This figure is last in the grid.
+    '''
+    legend_fig = figure(plot_height=500, plot_width=500,
+                        toolbar_location=None)
+    legend_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source,
+                                     legend='Legend',
+                                     color='Colours',
+                                     fill_alpha=0.2,
+                                     size=5
+                                     )
+    legend_fig.legend.location = "top_left"
+#    legend_fig.legend.location = (0, -30)
+#    legend_fig.legend.visible = False
+    legend_fig.legend.margin = 0
+    legend_fig.axis.visible = False
+    legend_fig.grid.visible = False
+    legend_fig.outline_line_color = None
+    legend_glyph.visible = False
+    fig_list.append(legend_fig)
+#    legend_obj = legend_fig.legend[0]
+#    legend_fig.legend.remove(legend_obj)
+#    legend_fig.add_layout(legend_obj, 'right')
 
     # Get the number of grid columns from the rounded square root of number of
     # figures. But only use a maximum of 6 columns.
 #    n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0)))
     n_grid_cols = min(6, int((np.sqrt(len(fig_list)))) + 1)
     # Create the final grid of figures
-    grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='right',
+    grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
                     css_classes=['scrollable'])
 
     return grid, glyph_list, source
-
-    '''
-    Test for adding legend
-    '''
-#    legend_fig = figure(plot_height= 150, plot_width= 150,
-#                        toolbar_location=None)
-#    fake_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source,
-#                     legend=colour_cat,
-#                     color=colour_def,
-#                     name='fake_glyph',
-#                     )
-#    legend_fig.axis.visible = False
-#
-#    legend = Legend(items=[('X', [glyph]),
-#                           ],
-#                    location=(0,-30)
-#                    )
-#
 
 
 def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
@@ -281,7 +286,7 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     for cat in cats:
         labels = cats_labels[cat]  # Lables of current category
         active_list = list(range(0, len(labels)))  # All labels start active
-        cbg = CheckboxButtonGroup(labels=labels, active=active_list, width=900)
+        cbg = CheckboxButtonGroup(labels=labels, active=active_list, width=999)
         cbg_list.append(cbg)
 
         # Make the annotation for the CheckboxButtonGroup:
@@ -300,7 +305,6 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     sel = Select(title='Category label for colours:', value=colour_cat,
                  options=cats)
     sel.on_change('value', partial(update_colors, df=df,
-                                   glyph_list=glyph_list,
                                    cats_labels=cats_labels, source=source))
 
     # Prepare the layout of the widgets:
@@ -387,7 +391,7 @@ def create_data_table(source, df):
     '''
     columns = []
 
-    for name in source.column_names[:-2]:  # Skip 'index' and 'Colours'
+    for name in source.column_names[:-3]:  # Skip 'index', 'Colours', 'Legend'
         if df[name].dtype == 'datetime64[ns]':
             column = TableColumn(field=name, title=name,
                                  formatter=DateFormatter())
@@ -542,10 +546,11 @@ def update_filters(active, caller, cats, cats_labels,
 #    view.filters = [BooleanFilter(filter_combined)]
 
 
-def update_colors(attr, old, new, df, glyph_list, cats_labels, source):
+def update_colors(attr, old, new, df, cats_labels, source):
     '''Function associated with the colour category dropdown menu widget.
-    The selected colour category label becomes the new "colour_cat". Based on
-    that the Bokeh colourmap is regenerated and applied to all the glyphs.
+    The selected colour category label becomes the new "colour_cat".
+    'Colours' is a column of both the DataFrame and the source which contains
+    the current colours. It is updated, just like the 'Legend' column.
 
     Args:
         attr (str) : The widget's attribute that is told about in old and new
@@ -556,56 +561,23 @@ def update_colors(attr, old, new, df, glyph_list, cats_labels, source):
 
         df (Pandas DataFrame) : The input data we want to explore.
 
-        glyph_list (List) : List of all used glyphs.
+        cats_labels (Dict) : Dictionary containing the categories associated
+            with each label.
+
+        source (ColumnDataSource) : Bokeh's data format.
 
     Return:
         None
 
     '''
     colour_cat = new
-#    bokeh_colormap = CategoricalColorMapper(palette=palette,
-#                                            factors=list(set(df[colour_cat])))
-#    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
-#    for gly in glyph_list:
-#        gly.glyph.fill_color = colour_def
-#        gly.glyph.line_color = colour_def
 
-    '''
-    Alternative way: 'Colours' is a column of both the DataFrame and the source
-    '''
     colourmap = get_colourmap(cats_labels[colour_cat])
+    df['Legend'] = df[colour_cat]
     df['Colours'] = [colourmap[x] for x in df[colour_cat]]
-    source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
-    '''
-    Test for modifying legend
-    '''
-#    for fig in fig_list:
-#        gly = fig.select_one({'name': 'glyph_name'})
-#        gly.glyph.fill_color = colour_def
-#        gly.glyph.line_color = colour_def
-#
-#    for fig in fig_list:
-#        fig.legend = Legend(colour_cat)
-#
-#    global legend_fig
-#    global fake_glyph
-#    legend_fig.axis.visible = True
-#    fake_glyph = legend_fig.select_one({'name': 'fake_glyph'})
-#    legend_fig.renderers.remove(fake_glyph)
-#    legend_fig.circle(x=vals[0], y=vals[1], source=source,
-#                     legend=colour_cat,
-#                     color=colour_def,
-#                     name='fake_glyph',
-#                     )
-#    legend_fig.add_glyph(source,
-#                         Circle(x=vals[0], y=vals[1],
-#                                line_color=colour_def,
-#                                fill_color=colour_def,
-#                                name='fake_glyph',
-#                                legend=colour_cat,
-#                                )
-#                         )
+    source.data['Legend'] = source.data[colour_cat]
+    source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
 
 def get_colourmap(categories):
