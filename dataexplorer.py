@@ -786,7 +786,7 @@ def load_file(filepath):
         show_info('File not loaded!', message)
         return  # Return, instead of completing the function
 
-#    logging.info('Loaded ' + filepath)
+    logging.debug('Loaded ' + filepath)
 
     data_name = os.path.basename(filepath)
     create_dataexplorer_UI(df, filepath, data_name)
@@ -812,7 +812,7 @@ def show_info(title, message):
         text_input.value = message
     except Exception:
         pass
-    logging.info(message)  # Bokeh's server logging funtion
+    logging.warning(message)  # Bokeh's server logging funtion
 
 
 '''

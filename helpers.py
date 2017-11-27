@@ -32,7 +32,7 @@ def new_upload_button(save_path, callback, label="Upload file"):
 
         with open(file_path, "wb") as f:
             f.write(file_contents)
-        logging.info("New file uploaded: " + file_path)
+        logging.debug("New file uploaded: " + file_path)
         callback(file_path)
 
     # This 'source' will be filled by the JavaScript callback
