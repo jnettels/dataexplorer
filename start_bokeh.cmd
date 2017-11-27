@@ -14,7 +14,7 @@ if not defined port set port=80
 rem # Read command line option #2 as log-level (default is 'warning'):
 rem # 'log-level' can be one of: trace, debug, info, warning, error or critical
 set loglevel=%2
-if not defined loglevel set loglevel=warning
+if not defined loglevel set loglevel=critical
 
 echo This batch file starts a Bokeh server that can be accessed remotely.
 echo - For local access type "localhost:%port%/dataexplorer" in local browser.

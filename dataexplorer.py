@@ -812,7 +812,7 @@ def show_info(title, message):
         text_input.value = message
     except Exception:
         pass
-    logging.warning(message)  # Bokeh's server logging funtion
+    logging.critical(message)  # Bokeh's server logging funtion
 
 
 '''
