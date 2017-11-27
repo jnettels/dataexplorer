@@ -38,9 +38,10 @@ import pandas as pd
 import numpy as np
 import itertools
 import os
+import logging
 from bokeh.layouts import widgetbox, gridplot, layout
-# from bokeh.layouts import column
 from bokeh.layouts import row
+# from bokeh.layouts import column
 from bokeh.models.widgets import CheckboxButtonGroup, Select  # , Button
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput
@@ -53,97 +54,11 @@ from bokeh import palettes
 from bokeh.io import curdoc
 from functools import partial
 from tkinter import Tk, filedialog  # , messagebox
-import logging  # Print in a logging format, which Bokeh server uses
-
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
 
-from helpers import new_upload_button  # My own library of functions
-
-
-def create_test_data():
-    '''Create some test data. Includes sin, cos and some random numbers. The
-    amount of data is hardcoded and controlled with the number of time steps.
-
-    Args:
-        None
-
-    Returns:
-        df (Pandas DataFrame) : An example set of test data.
-    '''
-
-    time_steps = 100  # Control the amount of test data
-
-    new_index = pd.date_range(start=pd.to_datetime('today'),
-                              periods=time_steps, freq='D')
-
-    dataA1 = {'T1': np.random.randint(0, 20, time_steps),
-              'T2': np.random.randint(0, 30, time_steps),
-              'Sin': np.sin(np.linspace(-np.pi, np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['A']*time_steps),
-              'Category Label 2': pd.Categorical(['First']*time_steps),
-              'Category Label 3': pd.Categorical(['10-20']*time_steps),
-              }
-    dataA2 = {'T1': np.random.randint(10, 30, time_steps),
-              'T2': np.random.randint(10, 40, time_steps),
-              'Sin': np.sin(np.linspace(-2*np.pi, 2*np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['A']*time_steps),
-              'Category Label 2': pd.Categorical(['Second']*time_steps),
-              'Category Label 3': pd.Categorical(['10-20']*time_steps),
-              }
-    dataB1 = {'T1': np.random.randint(20, 40, time_steps),
-              'T2': np.random.randint(20, 50, time_steps),
-              'Sin': np.sin(np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['B']*time_steps),
-              'Category Label 2': pd.Categorical(['First']*time_steps),
-              'Category Label 3': pd.Categorical(['10-20']*time_steps),
-              }
-    dataB2 = {'T1': np.random.randint(30, 50, time_steps),
-              'T2': np.random.randint(30, 60, time_steps),
-              'Cos': np.cos(np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['B']*time_steps),
-              'Category Label 2': pd.Categorical(['Third']*time_steps),
-              'Category Label 3': pd.Categorical(['20-30']*time_steps),
-              }
-    dataC1 = {'T1': np.random.randint(40, 60, time_steps),
-              'T2': np.random.randint(40, 70, time_steps),
-              'Sin': np.sin(0.5*np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['C']*time_steps),
-              'Category Label 2': pd.Categorical(['Second']*time_steps),
-              'Category Label 3': pd.Categorical(['20-30']*time_steps),
-              }
-    dataC2 = {'T1': np.random.randint(50, 70, time_steps),
-              'T2': np.random.randint(50, 80, time_steps),
-              'Cos': np.cos(0.5*np.linspace(-3*np.pi, 3*np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['C']*time_steps),
-              'Category Label 2': pd.Categorical(['Third']*time_steps),
-              'Category Label 3': pd.Categorical(['20-30']*time_steps),
-              }
-
-    df = pd.concat([
-        pd.DataFrame(data=dataA1, index=new_index),
-        pd.DataFrame(data=dataA2, index=new_index),
-        pd.DataFrame(data=dataB1, index=new_index),
-        pd.DataFrame(data=dataB2, index=new_index),
-        pd.DataFrame(data=dataC1, index=new_index),
-        pd.DataFrame(data=dataC2, index=new_index),
-        ])
-
-    df.index.name = 'Time'
-    df.reset_index(level=0, inplace=True)  # Make the index a regular column
-
-    # With categories applied, e.g. sorting them could be enabled
-    # Requires Pandas >= 0.21
-#    c1 = CategoricalDtype(['A', 'B', 'C'], ordered=True)
-#    c2 = CategoricalDtype(['First', 'Second', 'Third'], ordered=True)
-#    df['Category Label 1'] = df['Category Label 1'].astype(c1)
-#    df['Category Label 2'] = df['Category Label 2'].astype(c2)
-#    print(df.sort_values(by=['Category Label 2', 'Category Label 1']))
-
-#    df.to_excel('excel_text.xlsx')  # Save this as an Excel file if you want
-#    print(df)  # Show the final DataFrame in the terminal window
-
-    return df
+# My own library of functions from the file helpers.py
+from helpers import new_upload_button, create_test_data
 
 
 def create_dataexplorer_UI(df, filepath, data_name):
