@@ -29,8 +29,6 @@ During installation, please allow to add variables to $PATH (or to that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
-TODO Import palettes with more colours / use different markers?
-
 '''
 
 import pandas as pd
@@ -47,17 +45,15 @@ from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
 from bokeh.models import CustomJS
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
 # from bokeh.models import Circle, Legend
-# from bokeh.server.connection import ServerConnection
 from bokeh.plotting import figure
 from bokeh import palettes
 from bokeh.io import curdoc
 from functools import partial
-# from tkinter import Tk, filedialog, messagebox
+from tkinter import Tk, filedialog  # , messagebox
 import logging  # Print in a logging format, which Bokeh server uses
 
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
-# import socket
 
 from helpers import new_upload_button  # My own library of functions
 
@@ -790,7 +786,7 @@ def load_file(filepath):
         show_info('File not loaded!', message)
         return  # Return, instead of completing the function
 
-#    print('Loaded', filepath)
+#    logging.info('Loaded ' + filepath)
 
     data_name = os.path.basename(filepath)
     create_dataexplorer_UI(df, filepath, data_name)
@@ -825,15 +821,6 @@ Main function:
 The following lines are executed when the python script is started by the
 bokeh server. We create an initial set of test data and then create the
 DataExplorer user interface.
-'''
-
-'''Testing: Get IP
-ip = socket.gethostbyname(socket.gethostname())
-print(ip)
-
-args = curdoc().session_context.request
-print(args)
-print(args.__dir__)
 '''
 
 df = create_test_data()
