@@ -42,7 +42,7 @@ import logging
 from bokeh.layouts import widgetbox, gridplot, layout
 from bokeh.layouts import row
 # from bokeh.layouts import column
-from bokeh.models.widgets import CheckboxButtonGroup, Select  # , Button
+from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
@@ -78,21 +78,20 @@ def create_dataexplorer_UI(df, filepath, data_name):
     '''
 
     # Get categories, their labels and vals (column names of values) from df
-    cats, cats_labels, vals = analyse_dataframe(df)
-    colour_cat = cats[0]  # The first colour category label is the default
+    source, cats, cats_labels, vals, colour_cat = analyse_dataframe(df)
 
     # Use Bokeh to plot the data in an interactive way
-    grid, glyph_list, source = create_plots(df, cats_labels, vals, colour_cat)
+    grid = create_plots(source, df, vals, colour_cat)
 
     # Prepare the filters used to explore the data
     filter_list, filter_true = prepare_filter(cats, cats_labels, df)
 
     # Create and get a list of the widgets for tab 1
     wb_list_1 = create_widgets_1(cats, cats_labels, colour_cat, filter_list,
-                                 filter_true, df, source, glyph_list)
+                                 filter_true, df, source)
 
     # Create and get a list of the widgets for tab 2
-    wb_list_2 = create_widgets_2(filepath)
+    wb_list_2 = create_widgets_2(filepath, vals, colour_cat, source, df)
 
     # Create and get the DataTable for tab 3
     data_table = create_data_table(source, df)
@@ -118,6 +117,8 @@ def analyse_dataframe(df):
             with each label.
 
         vals (List) : List of the column names that contain values.
+
+        colour_cat (str) : Name of the current colour category label.
     '''
 
     columns = df.columns.values.tolist()
@@ -142,26 +143,28 @@ def analyse_dataframe(df):
             pass
 #        print(cat, cats_labels[cat])
 
-    max_vals = 8
-    if len(vals) > max_vals:
-        vals = vals[:max_vals]
-        message = 'Only showing the first '+str(max_vals)+' value columns.'
-        show_info('Too many value columns!', message)
+    # Set the colours as a column of the DataFrame:
+    colour_cat = cats[0]  # The first colour category label is the default
+    colourmap = get_colourmap(cats_labels[colour_cat])
+    colour_list = [colourmap[x] for x in df[colour_cat]]
+    df['Legend'] = df[colour_cat]
+    df['Colours'] = colour_list
 
-    return cats, cats_labels, vals
+    source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
+
+    return source, cats, cats_labels, vals, colour_cat
 
 
-def create_plots(df, cats_labels, vals, colour_cat):
+def create_plots(source, df, vals, colour_cat):
     '''Use Bokeh to plot the data in an interactive way. The Bokeh settings
     are defined in this function, as well as the combinatoric generator which
     generates the combinations of all the "vals". For each combination, a
     figure is created and all of those figures are combined into one grid.
 
     Args:
-        df (Pandas DataFrame) : The input data we want to explore.
+        source (ColumnDataSource) : Bokeh's data format.
 
-        cats_labels (Dict) : Dictionary containing the categories associated
-            with each label.
+        df (Pandas DataFrame) : The input data we want to explore.
 
         vals (List) : List of the column names that contain values.
 
@@ -170,24 +173,15 @@ def create_plots(df, cats_labels, vals, colour_cat):
     Returns:
         grid (Gridplot) : Grid containing all created figures.
 
-        glyph_list (List) : List of all used glyphs.
-
-        source (ColumnDataSource) : Bokeh's data format.
-
     '''
-    # Set the colours as a column of the DataFrame:
-    colourmap = get_colourmap(cats_labels[colour_cat])
-    colour_list = [colourmap[x] for x in df[colour_cat]]
-    df['Legend'] = df[colour_cat]
-    df['Colours'] = colour_list
 
-    source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
+    if len(vals) > vals_max:
+        vals = vals[:vals_max]
 
 #    view = CDSView(source=source, filters=[])  # Create an empty view object
 
     plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
-                                     'lasso_select', 'box_select',
-                                     'save',
+                                     'lasso_select', 'box_select', 'save',
                                      'help'],
                            'active_scroll': 'wheel_zoom',
                            'plot_height': 250, 'plot_width': 250,
@@ -225,8 +219,8 @@ def create_plots(df, cats_labels, vals, colour_cat):
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
         p.legend.visible = False
-        p.legend.location = "top_left"
-        p.legend.click_policy = "hide"
+        p.legend.location = 'top_left'
+        p.legend.click_policy = 'hide'
         fig_list.append(p)
         glyph_list.append(glyph)
 
@@ -242,7 +236,7 @@ def create_plots(df, cats_labels, vals, colour_cat):
                                      fill_alpha=0.2,
                                      size=5
                                      )
-    legend_fig.legend.location = "top_left"
+    legend_fig.legend.location = 'top_left'
 #    legend_fig.legend.location = (0, -30)
 #    legend_fig.legend.visible = False
     legend_fig.legend.margin = 0
@@ -263,11 +257,11 @@ def create_plots(df, cats_labels, vals, colour_cat):
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
                     css_classes=['scrollable'])
 
-    return grid, glyph_list, source
+    return grid
 
 
 def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
-                     df, source, glyph_list):
+                     df, source):
     '''Create and return a list of the widgets for tab 1. There are two types
     of widgets:
         1. CheckboxButtonGroup: Used to toggle the category filters
@@ -321,7 +315,7 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     return wb_list_1
 
 
-def create_widgets_2(filepath):
+def create_widgets_2(filepath, vals, colour_cat, source, df):
     '''Create and return a list of the widgets for tab 2. There are three
     types of widgets:
         1. Button: Used to load a new file and then rebuild the whole layout
@@ -330,6 +324,8 @@ def create_widgets_2(filepath):
 
     Args:
         filepath (str) : Path to file to load.
+
+        ...
 
     Return:
         wb_list_2 (List) : A list of widgetboxes, each containing widgets.
@@ -356,24 +352,37 @@ def create_widgets_2(filepath):
 
     # Second implementation
     div1 = Div(text='''<div>
-                  Load a new file with a file dialog
+                  Upload a new Excel file to the server
                   </div>''', width=600)
-    div2 = Div(text='''<div> </div>''', height=33, width=600)  # Empty text
+    div2 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
+    div3 = Div(text='''<div style="position:absolute; bottom:0px">
+               Select the value columns used in the plots
+               </div>''', height=25, width=600)
+    div4 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
 
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     but_load_new = new_upload_button(save_path, load_file)
 
-    global text_input
-    text_input = TextInput(value='',
-                           title='Latest (error) message',
-                           width=1000)
-    text_input.js_on_change('value', CustomJS(code="""
-        alert(cb_obj.value)
-        """))
+    ti_vals_max = TextInput(value=str(vals_max),
+                            title='Set the maximum number of value columns',
+                            width=282)
+    ti_vals_max.on_change('value', update_vals_max)
 
-    wb = widgetbox(div1, but_load_new, div2, text_input)
+    global ti_alert  # We need a global write access to this
+    ti_alert = TextInput(value='',
+                         title='Latest (error) message',
+                         width=1000)
+    ti_alert.js_on_change('value', CustomJS(code='''alert(cb_obj.value)'''))
+
+    active_list = list(range(0, min(len(vals), vals_max)))
+    cg = CheckboxGroup(labels=vals, active=active_list)
+    cg.on_change('active', partial(update_gridplot, vals=vals, source=source,
+                                   df=df, colour_cat=colour_cat))
+
+    wb = widgetbox(div1, but_load_new, div2, ti_vals_max,
+                   div3, cg, div4, ti_alert)
     wb_list_2 = [wb]
 
     return wb_list_2
@@ -441,18 +450,6 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
     curdoc().clear()  # Clear any previous document roots
     curdoc().add_root(tabs)  # Add a new root to the document
     curdoc().title = 'DataExplorer: '+data_name
-
-    # The children of a layout can be treated like a list:
-#    layout_1.children.remove(grid)
-#    layout_1.children.append(grid)
-
-#    rootLayout = curdoc().get_model_by_name('layout_1')
-#    listOfSubLayouts = rootLayout.children
-#    print(layout_1)
-#
-#    plotToRemove = curdoc().get_model_by_name('plot_grid')
-#    print(plotToRemove)
-#    layout_1.children.remove(plotToRemove)
 
 
 def prepare_filter(cats, cats_labels, df):
@@ -580,6 +577,51 @@ def update_colors(attr, old, new, df, cats_labels, source):
     source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
 
+def update_gridplot(attr, old, new, vals, source, df, colour_cat):
+
+    # Translate the active button positions into chosen category strings:
+    vals_active = [vals[j] for j in new]
+
+    if len(vals_active) > vals_max:
+        message = 'Maximum of '+str(vals_max)+' value columns exceeded.'
+        show_info(message)
+        return
+    elif len(vals_active) < 2:
+        return
+    else:
+        # Create a new grid:
+        grid_new = create_plots(source, df, vals_active, colour_cat)
+
+        # Get the old grid and the layout containing it from current document:
+        grid_old = curdoc().roots[0].tabs[0].child.children[1]
+#        grid_old = curdoc().get_model_by_name('plot_grid')  # Does not work
+        layout_1 = curdoc().roots[0].tabs[0].child
+
+        # The children of a layout can be treated like a list:
+        layout_1.children.remove(grid_old)
+        layout_1.children.append(grid_new)
+
+
+def update_vals_max(attr, old, new):
+    '''This function is triggered by the "ti_vals_max" text input widget.
+    The user input value 'new' is stored as an int in the global variable
+    vals_max.
+
+    Args:
+        new (str) : User text input
+
+    Return:
+        None
+
+    '''
+    global vals_max
+    try:
+        vals_max = int(new)
+    except Exception as ex:
+        show_info(str(ex))
+        pass
+
+
 def get_colourmap(categories):
     '''This function creates a dictionary of categories and their colours. It
     handles the possible exception thrown when the palette is not long enough.
@@ -638,18 +680,18 @@ def load_file_dialog():
     load_file(root.filename)
 
 
-def reload_file(text_input):
+def reload_file(ti_alert):
     '''This function is triggered by the "load file" button. It asks the
-    text_input widget for its current value and hands that to load_file().
+    ti_alert widget for its current value and hands that to load_file().
 
     Args:
-        text_input (TextInput) : Bokeh widget.
+        ti_alert (TextInput) : Bokeh widget.
 
     Return:
         None
 
     '''
-    filepath = text_input.value
+    filepath = ti_alert.value
     load_file(filepath)
 
 
@@ -675,7 +717,7 @@ def load_file(filepath):
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up messagebox:
         message = 'File not loaded: '+filepath+' \n'+str(ex)
-        show_info('File not loaded!', message)
+        show_info(message)
         return  # Return, instead of completing the function
 
     logging.debug('Loaded ' + filepath)
@@ -684,24 +726,20 @@ def load_file(filepath):
     create_dataexplorer_UI(df, filepath, data_name)
 
 
-def show_info(title, message):
+def show_info(message):
     '''Shows a notification window with given title and message.
 
     Args:
-        title (str) : Title of window.
-
-        message (str) : message text.
+        message (str) : Message text.
 
     Return:
         None
 
     '''
-#    root = Tk()
-#    root.withdraw()  # Important: Hides the empty 'root' window
-#    messagebox.showinfo(title, message)
-    global text_input
-    try:  # The text_input widget may not have been created yet
-        text_input.value = message
+    global ti_alert
+    try:  # The ti_alert widget may not have been created yet
+        timestamp = pd.datetime.now().time().strftime('%H:%M')
+        ti_alert.value = timestamp + ' ' + message
     except Exception:
         pass
     logging.critical(message)  # Bokeh's server logging funtion
@@ -715,6 +753,7 @@ bokeh server. We create an initial set of test data and then create the
 DataExplorer user interface.
 '''
 
+vals_max = 6  # Default for the global variable of maximum value columns
 df = create_test_data()
 data_name = 'Test Data'
 filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
