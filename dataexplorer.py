@@ -44,7 +44,7 @@ from bokeh.layouts import row
 # from bokeh.layouts import column
 from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
-from bokeh.models.widgets import Panel, Tabs, TextInput
+from bokeh.models.widgets import Panel, Tabs, TextInput, Slider
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
 from bokeh.models import CustomJS
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
@@ -365,10 +365,11 @@ def create_widgets_2(filepath, vals, colour_cat, source, df):
         os.makedirs(save_path)
     but_load_new = new_upload_button(save_path, load_file)
 
-    ti_vals_max = TextInput(value=str(vals_max),
-                            title='Set the maximum number of value columns',
-                            width=282)
-    ti_vals_max.on_change('value', update_vals_max)
+    sl_vals_max = Slider(start=2, end=len(vals), step=1,
+                         value=min(vals_max, len(vals)),
+                         title='Set the maximum number of value columns')
+
+    sl_vals_max.on_change('value', update_vals_max)
 
     global ti_alert  # We need a global write access to this
     ti_alert = TextInput(value='',
@@ -381,7 +382,7 @@ def create_widgets_2(filepath, vals, colour_cat, source, df):
     cg.on_change('active', partial(update_gridplot, vals=vals, source=source,
                                    df=df, colour_cat=colour_cat))
 
-    wb = widgetbox(div1, but_load_new, div2, ti_vals_max,
+    wb = widgetbox(div1, but_load_new, div2, sl_vals_max,
                    div3, cg, div4, ti_alert)
     wb_list_2 = [wb]
 
@@ -603,23 +604,18 @@ def update_gridplot(attr, old, new, vals, source, df, colour_cat):
 
 
 def update_vals_max(attr, old, new):
-    '''This function is triggered by the "ti_vals_max" text input widget.
-    The user input value 'new' is stored as an int in the global variable
-    vals_max.
+    '''This function is triggered by the "sl_vals_max" slider widget.
+    The user input value 'new' is stored in the global variable vals_max.
 
     Args:
-        new (str) : User text input
+        new (int) : User text input
 
     Return:
         None
 
     '''
     global vals_max
-    try:
-        vals_max = int(new)
-    except Exception as ex:
-        show_info(str(ex))
-        pass
+    vals_max = int(new)
 
 
 def get_colourmap(categories):
