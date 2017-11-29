@@ -78,7 +78,11 @@ def create_dataexplorer_UI(df, filepath, data_name):
     '''
 
     # Get categories, their labels and vals (column names of values) from df
-    source, cats, cats_labels, vals, colour_cat = analyse_dataframe(df)
+    try:
+        source, cats, cats_labels, vals, colour_cat = analyse_dataframe(df)
+    except Exception as ex:
+        show_info(str(ex))  # Skip the rest in case of an error
+        return
 
     # Use Bokeh to plot the data in an interactive way
     grid = create_plots(source, df, vals, colour_cat)
@@ -91,10 +95,10 @@ def create_dataexplorer_UI(df, filepath, data_name):
                                  filter_true, df, source)
 
     # Create and get a list of the widgets for tab 2
-    wb_list_2 = create_widgets_2(filepath, vals, colour_cat, source, df)
+    wb_list_2 = create_widgets_2(filepath, vals, colour_cat, source, df, cats)
 
     # Create and get the DataTable for tab 3
-    data_table = create_data_table(source, df)
+    data_table = create_data_table(source, df, cats, vals)
 
     # Create a Bokeh "layout" from the widgets and grid of figures
     create_layout(wb_list_1, grid, wb_list_2, data_table, data_name)
@@ -130,6 +134,13 @@ def analyse_dataframe(df):
             cats.append(column)
         else:
             vals.append(column)
+
+    if cats == []:
+        raise LookupError('No category columns found in the file! Please ' +
+                          'refer to example Excel file for instructions.')
+    elif vals == []:
+        raise LookupError('No value columns found in the file! Please ' +
+                          'refer to example Excel file for instructions.')
 
     cats_labels = dict()
     for cat in cats:
@@ -315,7 +326,7 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     return wb_list_1
 
 
-def create_widgets_2(filepath, vals, colour_cat, source, df):
+def create_widgets_2(filepath, vals, colour_cat, source, df, cats):
     '''Create and return a list of the widgets for tab 2. There are three
     types of widgets:
         1. Button: Used to load a new file and then rebuild the whole layout
@@ -351,11 +362,11 @@ def create_widgets_2(filepath, vals, colour_cat, source, df):
 #    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
 
     # Second implementation
-    div1 = Div(text='''<div>
+    div1 = Div(text='''<div style="position:relative; top:5px">
                   Upload a new Excel file to the server
                   </div>''', width=600)
     div2 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
-    div3 = Div(text='''<div style="position:absolute; bottom:0px">
+    div3 = Div(text='''<div style="position:relative; top:15px">
                Select the value columns used in the plots
                </div>''', height=25, width=600)
     div4 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
@@ -380,7 +391,7 @@ def create_widgets_2(filepath, vals, colour_cat, source, df):
     active_list = list(range(0, min(len(vals), vals_max)))
     cg = CheckboxGroup(labels=vals, active=active_list)
     cg.on_change('active', partial(update_gridplot, vals=vals, source=source,
-                                   df=df, colour_cat=colour_cat))
+                                   df=df, colour_cat=colour_cat, cats=cats))
 
     wb = widgetbox(div1, but_load_new, div2, sl_vals_max,
                    div3, cg, div4, ti_alert)
@@ -389,8 +400,9 @@ def create_widgets_2(filepath, vals, colour_cat, source, df):
     return wb_list_2
 
 
-def create_data_table(source, df):
-    '''Create and return the DataTable widget for tab 3.
+def create_data_table(source, df, cats, vals):
+    '''Create and return the DataTable widget.
+    TODO: Only show vals_active
 
     Args:
         source (ColumnDataSource) : The Bokeh source object
@@ -399,24 +411,24 @@ def create_data_table(source, df):
         data_table (DataTable) : Bokeh DataTable widget.
 
     '''
-    columns = []
+    dt_columns = []
 
-    for name in source.column_names[:-3]:  # Skip 'index', 'Colours', 'Legend'
+    for name in cats + vals:
         if df[name].dtype == 'datetime64[ns]':
-            column = TableColumn(field=name, title=name,
-                                 formatter=DateFormatter())
+            dt_column = TableColumn(field=name, title=name,
+                                    formatter=DateFormatter())
         else:
-            column = TableColumn(field=name, title=name)
-        columns.append(column)
+            dt_column = TableColumn(field=name, title=name)
+        dt_columns.append(dt_column)
 
-    data_table = DataTable(source=source, columns=columns,
+    data_table = DataTable(source=source, columns=dt_columns,
                            fit_columns=True,
                            width=1400,
                            height=800,
-                           editable=True,
                            scroll_to_selection=False,
-                           sortable=True
+                           sortable=True,  # editable=True,
                            )
+
     return data_table
 
 
@@ -451,6 +463,9 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
     curdoc().clear()  # Clear any previous document roots
     curdoc().add_root(tabs)  # Add a new root to the document
     curdoc().title = 'DataExplorer: '+data_name
+
+#    table_old = curdoc().roots[0].tabs[1].child
+#    print(table_old)
 
 
 def prepare_filter(cats, cats_labels, df):
@@ -578,7 +593,7 @@ def update_colors(attr, old, new, df, cats_labels, source):
     source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
 
-def update_gridplot(attr, old, new, vals, source, df, colour_cat):
+def update_gridplot(attr, old, new, vals, source, df, colour_cat, cats):
 
     # Translate the active button positions into chosen category strings:
     vals_active = [vals[j] for j in new]
@@ -601,6 +616,13 @@ def update_gridplot(attr, old, new, vals, source, df, colour_cat):
         # The children of a layout can be treated like a list:
         layout_1.children.remove(grid_old)
         layout_1.children.append(grid_new)
+
+#        table_old = curdoc().roots[0].tabs[1].child.children[0]
+#        print(table_old)
+#        table_new = create_data_table(source, df, cats, vals_active)
+#        layout_2 = curdoc().roots[0].tabs[1].child
+#        layout_2.children.remove(table_old)
+#        layout_2.children.append(layout(table_new))
 
 
 def update_vals_max(attr, old, new):
@@ -709,11 +731,18 @@ def load_file(filepath):
 
     logging.info('Trying to open file: ' + filepath)
     try:
-        df = pd.read_excel(filepath)
+        filetype = os.path.splitext(os.path.basename(filepath))[1]
+        if filetype in ['.xlsx', '.xls']:
+            df = pd.read_excel(filepath)
+        elif filetype in ['.csv']:
+            df = pd.read_csv(filepath, sep=None, engine='python',
+                             parse_dates=[0],
+                             infer_datetime_format=True)
+        else:
+            raise NotImplementedError('Unsupported file extension: '+filetype)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up messagebox:
-        message = 'File not loaded: '+filepath+' \n'+str(ex)
-        show_info(message)
+        show_info('File not loaded: '+filepath+' \n'+str(ex))
         return  # Return, instead of completing the function
 
     logging.debug('Loaded ' + filepath)
