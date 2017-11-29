@@ -80,9 +80,9 @@ def create_dataexplorer_UI(df, filepath, data_name):
     # Get categories, their labels and vals (column names of values) from df
     try:
         source, cats, cats_labels, vals, colour_cat = analyse_dataframe(df)
-    except Exception as ex:
-        show_info(str(ex))  # Skip the rest in case of an error
-        return
+    except Exception as ex:  # Will be thrown if the df has an incorrect format
+        show_info(str(ex))
+        return  # Skip the rest in case of an exception
 
     # Use Bokeh to plot the data in an interactive way
     grid = create_plots(source, df, vals, colour_cat)
@@ -266,7 +266,11 @@ def create_plots(source, df, vals, colour_cat):
     n_grid_cols = min(6, int((np.sqrt(len(fig_list)))) + 1)
     # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
-                    css_classes=['scrollable'])
+                    css_classes=['scrollable'],
+#                    sizing_mode='scale_height',
+#                    sizing_mode='scale_both',
+#                    sizing_mode='stretch_both',
+                    )
 
     return grid
 
@@ -363,11 +367,11 @@ def create_widgets_2(filepath, vals, colour_cat, source, df, cats):
 
     # Second implementation
     div1 = Div(text='''<div style="position:relative; top:5px">
-                  Upload a new Excel file to the server
+                  Upload a new file to the server:
                   </div>''', width=600)
     div2 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
     div3 = Div(text='''<div style="position:relative; top:15px">
-               Select the value columns used in the plots
+               Select the value columns used in the plots:
                </div>''', height=25, width=600)
     div4 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
 
@@ -384,7 +388,7 @@ def create_widgets_2(filepath, vals, colour_cat, source, df, cats):
 
     global ti_alert  # We need a global write access to this
     ti_alert = TextInput(value='',
-                         title='Latest (error) message',
+                         title='Latest (error) message:',
                          width=1000)
     ti_alert.js_on_change('value', CustomJS(code='''alert(cb_obj.value)'''))
 
@@ -714,10 +718,13 @@ def reload_file(ti_alert):
 
 
 def load_file(filepath):
-    '''The chosen file is read into a Pandas DataFrame. In order
-    to regenerate all widgets and figures, create_dataexplorer_UI() is called.
-    This finishes with calling create_layout(), which "cleares" the current
-    Bokeh dokument and adds a new root to the empty document.
+    '''The chosen file is read into a Pandas DataFrame.
+    Supported file types are '.xlsx' and '.xls'. Pandas will also try to read
+    in '.csv' files, but can easily fail if the separators are not guessed
+    correctly.
+    In order to regenerate all widgets and figures, create_dataexplorer_UI()
+    is called. This finishes with calling create_layout(), which "cleares"
+    the current Bokeh dokument and adds a new root to the empty document.
 
     Args:
         filepath (str) : Path to file to load.
@@ -735,8 +742,9 @@ def load_file(filepath):
         if filetype in ['.xlsx', '.xls']:
             df = pd.read_excel(filepath)
         elif filetype in ['.csv']:
-            df = pd.read_csv(filepath, sep=None, engine='python',
-                             parse_dates=[0],
+            df = pd.read_csv(filepath,
+                             sep=None, engine='python',  # Guess separator
+                             parse_dates=[0],  # Try to parse first col as date
                              infer_datetime_format=True)
         else:
             raise NotImplementedError('Unsupported file extension: '+filetype)
