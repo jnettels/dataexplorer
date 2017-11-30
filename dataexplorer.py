@@ -66,6 +66,59 @@ from pandas.api.types import is_categorical_dtype
 from helpers import new_upload_button, create_test_data
 
 
+class Dataexplorer(object):
+    '''Dataexplorer class'''
+
+    def __init__(self, df, filepath, data_name, combinator=1, vals_max=6):
+        '''Return a Dataexplorer object'''
+        self.df = df
+        self.vals_max = vals_max
+        self.filepath = filepath
+        self.data_name = data_name
+        self.combinator = combinator
+
+        # Set categories, their labels and value column names
+        try:
+            analyse_dataframe(self)
+        except Exception as ex:  # Is thrown if the df has an incorrect format
+            self.show_info(str(ex))
+            return  # Skip the rest in case of an exception
+
+        # Use Bokeh to plot the data in an interactive way
+        create_plots(self)
+
+        # Prepare the filters used to explore the data
+        prepare_filter(self)
+
+        # Create and get a list of the widgets for tab 1
+        create_widgets_1(self)
+
+        # Create and get a list of the widgets for tab 2
+        create_widgets_2(self)
+
+        # Create and get the DataTable for tab 3
+        create_data_table(self)
+
+        # Create a Bokeh "layout" from the widgets and grid of figures
+        create_layout(self)
+
+    def show_info(self, message):
+        '''Shows a notification window with given title and message.
+
+        Args:
+            message (str) : Message text.
+
+        Return:
+            None
+        '''
+        try:  # The ti_alert widget may not have been created yet
+            timestamp = pd.datetime.now().time().strftime('%H:%M')
+            self.ti_alert.value = timestamp + ' ' + message
+        except Exception:
+            pass
+        logging.critical(message)  # Bokeh's server logging funtion
+
+
 def create_dataexplorer_UI(df, filepath, data_name):
     '''Performs all the tasks necessary to create the Data Explorer user
     interface by calling the required functions. It is also used to recreate
@@ -82,37 +135,12 @@ def create_dataexplorer_UI(df, filepath, data_name):
         None
 
     '''
-
-    # Get categories, their labels and vals (column names of values) from df
-    try:
-        source, cats, cats_labels, vals, colour_cat = analyse_dataframe(df)
-    except Exception as ex:  # Will be thrown if the df has an incorrect format
-        show_info(str(ex))
-        return  # Skip the rest in case of an exception
-
-    # Use Bokeh to plot the data in an interactive way
-    grid = create_plots(source, df, vals, colour_cat)
-
-    # Prepare the filters used to explore the data
-    filter_list, filter_true = prepare_filter(cats, cats_labels, df)
-
-    # Create and get a list of the widgets for tab 1
-    wb_list_1 = create_widgets_1(cats, cats_labels, colour_cat, filter_list,
-                                 filter_true, df, source)
-
-    # Create and get a list of the widgets for tab 2
-    wb_list_2 = create_widgets_2(filepath, vals, colour_cat, source, df, cats)
-
-    # Create and get the DataTable for tab 3
-    data_table = create_data_table(source, df, cats, vals)
-
-    # Create a Bokeh "layout" from the widgets and grid of figures
-    create_layout(wb_list_1, grid, wb_list_2, data_table, data_name)
+    DatEx = Dataexplorer(df, filepath, data_name)
 
     # The script ends here (but Bokeh keeps waiting for user input)
 
 
-def analyse_dataframe(df):
+def analyse_dataframe(self):
     '''Analyse a given DataFrame to seperate the columns in categories and
     values. "Object" columns become categories, their column names are saved
     as category labels.
@@ -130,6 +158,8 @@ def analyse_dataframe(df):
 
         colour_cat (str) : Name of the current colour category label.
     '''
+
+    df = self.df
 
     columns = df.columns.values.tolist()
     cats = []
@@ -169,10 +199,22 @@ def analyse_dataframe(df):
 
     source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
 
-    return source, cats, cats_labels, vals, colour_cat
+    if len(vals) > self.vals_max:
+        vals_active = vals[:self.vals_max]
+    else:
+        vals_active = vals
+
+    self.vals = vals
+    self.cats = cats
+    self.source = source
+    self.colour_cat = colour_cat
+    self.cats_labels = cats_labels
+    self.vals_active = vals_active
+
+    return
 
 
-def create_plots(source, df, vals, colour_cat):
+def create_plots(self):
     '''Use Bokeh to plot the data in an interactive way. The Bokeh settings
     are defined in this function, as well as the combinatoric generator which
     generates the combinations of all the "vals". For each combination, a
@@ -192,9 +234,6 @@ def create_plots(source, df, vals, colour_cat):
 
     '''
 
-    if len(vals) > vals_max:
-        vals = vals[:vals_max]
-
 #    view = CDSView(source=source, filters=[])  # Create an empty view object
 
     plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
@@ -210,24 +249,29 @@ def create_plots(source, df, vals, colour_cat):
 #    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
 
     # A choice of combinatoric generators with decending number of results:
-#    permutation_list = itertools.product(vals, repeat=2)
-#    permutation_list = itertools.permutations(vals, r=2)
-#    permutation_list = itertools.combinations_with_replacement(vals, r=2)
-    permutation_list = itertools.combinations(vals, r=2)
+    if self.combinator == 4:
+        permutation_list = itertools.product(self.vals_active, repeat=2)
+    elif self.combinator == 3:
+        permutation_list = itertools.combinations_with_replacement(
+                self.vals_active, r=2)
+    elif self.combinator == 2:
+        permutation_list = itertools.permutations(self.vals_active, r=2)
+    elif self.combinator == 1:
+        permutation_list = itertools.combinations(self.vals_active, r=2)
 
     fig_list = []  # List with the complete figures
     glyph_list = []  # List with the glyphs contained in the figures
     for permutation in permutation_list:
         x_val = permutation[0]
         y_val = permutation[1]
-        if df[x_val].dtype == 'datetime64[ns]':
+        if self.df[x_val].dtype == 'datetime64[ns]':
             p = figure(**plot_size_and_tools, x_axis_type='datetime')
-        elif df[y_val].dtype == 'datetime64[ns]':
+        elif self.df[y_val].dtype == 'datetime64[ns]':
             p = figure(**plot_size_and_tools, y_axis_type='datetime')
         else:
             p = figure(**plot_size_and_tools)
 
-        glyph = p.circle(x=x_val, y=y_val, source=source,
+        glyph = p.circle(x=x_val, y=y_val, source=self.source,
                          legend='Legend',
                          color='Colours',
                          fill_alpha=0.2,
@@ -247,7 +291,8 @@ def create_plots(source, df, vals, colour_cat):
     '''
     legend_fig = figure(plot_height=500, plot_width=500,
                         toolbar_location=None)
-    legend_glyph = legend_fig.circle(x=vals[0], y=vals[1], source=source,
+    legend_glyph = legend_fig.circle(x=self.vals[0], y=self.vals[1],
+                                     source=self.source,
                                      legend='Legend',
                                      color='Colours',
                                      fill_alpha=0.2,
@@ -269,8 +314,12 @@ def create_plots(source, df, vals, colour_cat):
 
     # Get the number of grid columns from the rounded square root of number of
     # figures. But only use a maximum of 6 columns.
-#    n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0)))
-    n_grid_cols = min(6, int((np.sqrt(len(fig_list)))) + 1)
+    if self.combinator == 4:
+        n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0)))
+    elif self.combinator == 2:
+        n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0))-1)
+    else:
+        n_grid_cols = min(6, int((np.sqrt(len(fig_list)))) + 1)
     # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
                     css_classes=['scrollable'],
@@ -278,12 +327,11 @@ def create_plots(source, df, vals, colour_cat):
 #                    sizing_mode='scale_both',
 #                    sizing_mode='stretch_both',
                     )
+    self.grid = grid
+    return self.grid
 
-    return grid
 
-
-def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
-                     df, source):
+def create_widgets_1(self):
     '''Create and return a list of the widgets for tab 1. There are two types
     of widgets:
         1. CheckboxButtonGroup: Used to toggle the category filters
@@ -299,8 +347,8 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     '''
     cbg_list = []
     div_list = []
-    for cat in cats:
-        labels = cats_labels[cat]  # Lables of current category
+    for cat in self.cats:
+        labels = self.cats_labels[cat]  # Lables of current category
         active_list = list(range(0, len(labels)))  # All labels start active
         cbg = CheckboxButtonGroup(labels=labels, active=active_list, width=999)
         cbg_list.append(cbg)
@@ -314,14 +362,11 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     for i, cbg in enumerate(cbg_list):
         # We need the update_filter function to know who calls it, so we use
         # the "partial" function to transport that information
-        cbg.on_click(partial(update_filters, caller=i, cats=cats,
-                             cats_labels=cats_labels, filter_list=filter_list,
-                             filter_true=filter_true, df=df, source=source))
+        cbg.on_click(partial(update_filters, caller=i, DatEx=self))
 
-    sel = Select(title='Category label for colours:', value=colour_cat,
-                 options=cats)
-    sel.on_change('value', partial(update_colors, df=df,
-                                   cats_labels=cats_labels, source=source))
+    sel = Select(title='Category label for colours:', value=self.colour_cat,
+                 options=self.cats)
+    sel.on_change('value', partial(update_colors, DatEx=self))
 
     # Prepare the layout of the widgets:
     # Create rows with pairs of Div() and CheckboxButtonGroup(), where the
@@ -332,12 +377,12 @@ def create_widgets_1(cats, cats_labels, colour_cat, filter_list, filter_true,
     for row_new in row_list:
         div_and_cgb_cols.append(row(*row_new))
 
-    wb_list_1 = [widgetbox(sel), div_and_cgb_cols]
+    self.wb_list_1 = [widgetbox(sel), div_and_cgb_cols]
 
-    return wb_list_1
+    return
 
 
-def create_widgets_2(filepath, vals, colour_cat, source, df, cats):
+def create_widgets_2(self):
     '''Create and return a list of the widgets for tab 2. There are three
     types of widgets:
         1. Button: Used to load a new file and then rebuild the whole layout
@@ -385,33 +430,35 @@ def create_widgets_2(filepath, vals, colour_cat, source, df, cats):
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    but_load_new = new_upload_button(save_path, load_file)
+    but_load_new = new_upload_button(save_path, load_file, self)
 
-    sl_vals_max = Slider(start=2, end=len(vals), step=1,
-                         value=min(vals_max, len(vals)),
+    sl_vals_max = Slider(start=2, end=len(self.vals), step=1,
+                         value=min(self.vals_max, len(self.vals)),
                          title='Set the maximum number of value columns')
+    sl_vals_max.on_change('value', partial(update_vals_max, DatEx=self))
 
-    sl_vals_max.on_change('value', update_vals_max)
+    sl_comb = Slider(start=1, end=4, step=1, value=self.combinator,
+                     title='Set complexity of the combinatoric generator')
+    sl_comb.on_change('value', partial(update_combinator, DatEx=self))
 
-    global ti_alert  # We need a global write access to this
-    ti_alert = TextInput(value='',
-                         title='Latest (error) message:',
-                         width=1000)
-    ti_alert.js_on_change('value', CustomJS(code='''alert(cb_obj.value)'''))
+    self.ti_alert = TextInput(value='',
+                              title='Latest (error) message:',
+                              width=1000)
+    self.ti_alert.js_on_change('value',
+                               CustomJS(code='''alert(cb_obj.value)'''))
 
-    active_list = list(range(0, min(len(vals), vals_max)))
-    cg = CheckboxGroup(labels=vals, active=active_list)
-    cg.on_change('active', partial(update_gridplot, vals=vals, source=source,
-                                   df=df, colour_cat=colour_cat, cats=cats))
+    active_list = list(range(0, min(len(self.vals), self.vals_max)))
+    cg = CheckboxGroup(labels=self.vals, active=active_list)
+    cg.on_change('active', partial(update_vals_active, DatEx=self))
 
-    wb = widgetbox(div1, but_load_new, div2, sl_vals_max,
-                   div3, cg, div4, ti_alert)
-    wb_list_2 = [wb]
+    wb = widgetbox(div1, but_load_new, div2, sl_vals_max, sl_comb,
+                   div3, cg, div4, self.ti_alert)
+    self.wb_list_2 = [wb]
 
-    return wb_list_2
+    return
 
 
-def create_data_table(source, df, cats, vals):
+def create_data_table(self):
     '''Create and return the DataTable widget.
     TODO: Only show vals_active
 
@@ -424,26 +471,26 @@ def create_data_table(source, df, cats, vals):
     '''
     dt_columns = []
 
-    for name in cats + vals:
-        if df[name].dtype == 'datetime64[ns]':
+    for name in self.cats + self.vals:
+        if self.df[name].dtype == 'datetime64[ns]':
             dt_column = TableColumn(field=name, title=name,
                                     formatter=DateFormatter())
         else:
             dt_column = TableColumn(field=name, title=name)
         dt_columns.append(dt_column)
 
-    data_table = DataTable(source=source, columns=dt_columns,
+    data_table = DataTable(source=self.source, columns=dt_columns,
                            fit_columns=True,
                            width=1400,
                            height=800,
                            scroll_to_selection=False,
                            sortable=True,  # editable=True,
                            )
+    self.data_table = data_table
+    return
 
-    return data_table
 
-
-def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
+def create_layout(self):
     '''Create a Bokeh "layouts" from the widgetboxes and grid of figures.
     The layouts are organized into tabs and those are added as "root" to the
     current Bokeh document.
@@ -462,9 +509,9 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
     Return:
         None
     '''
-    layout_1 = layout([wb_list_1, grid])
-    layout_2 = layout(data_table)
-    layout_3 = layout(wb_list_2)
+    layout_1 = layout([self.wb_list_1, self.grid])
+    layout_2 = layout(self.data_table)
+    layout_3 = layout(self.wb_list_2)
 
     tab_1 = Panel(child=layout_1, title='Scatters')
     tab_2 = Panel(child=layout_2, title='Data Table')
@@ -473,13 +520,13 @@ def create_layout(wb_list_1, grid, wb_list_2, data_table, data_name):
 
     curdoc().clear()  # Clear any previous document roots
     curdoc().add_root(tabs)  # Add a new root to the document
-    curdoc().title = 'DataExplorer: '+data_name
+    curdoc().title = 'DataExplorer: '+self.data_name
 
 #    table_old = curdoc().roots[0].tabs[1].child
 #    print(table_old)
 
 
-def prepare_filter(cats, cats_labels, df):
+def prepare_filter(self):
     ''' Prepare the filters used to explore the data. A filter is a list of
     boolean values. Each category label needs its own filter. The filters start
     all 'True' and will be modified later, based on the user input.
@@ -501,16 +548,17 @@ def prepare_filter(cats, cats_labels, df):
     '''
     filter_list = []
     filter_true = []  # Define here, overwrite below, so we can use again later
-    for cat in cats:
-        labels = cats_labels[cat]
-        filter_true = df[cat].isin(labels)
+    for cat in self.cats:
+        labels = self.cats_labels[cat]
+        filter_true = self.df[cat].isin(labels)
         filter_list.append(filter_true)
 
-    return filter_list, filter_true
+    self.filter_list = filter_list
+    self.filter_true = filter_true
+    return
 
 
-def update_filters(active, caller, cats, cats_labels,
-                   filter_list, filter_true, df, source):
+def update_filters(active, caller, DatEx):
     '''Function associated with the CheckboxButtonGroups (CBG). Each CBG has
     one corresponding filter (which belongs to one category label). The calling
     CBG identifies itself with the "caller" argument. It delivers a list of the
@@ -533,8 +581,8 @@ def update_filters(active, caller, cats, cats_labels,
 
     '''
     i = caller
-    cat_sel = cats[i]  # Name of category label corresponding to calling CBG
-    labels = cats_labels[cat_sel]  # Categories within that label
+    cat_sel = DatEx.cats[i]  # Name of category label corresponding to caller
+    labels = DatEx.cats_labels[cat_sel]  # Categories within that label
 
     # Translate the active button positions into chosen category strings
     labels_active = []
@@ -543,23 +591,23 @@ def update_filters(active, caller, cats, cats_labels,
 
     # Get a boolean filter of the selected category label, where the selected
     # categories are "True". Store this in the correct filter_list
-    filter_list[i] = df[cat_sel].isin(labels_active)
+    DatEx.filter_list[i] = DatEx.df[cat_sel].isin(labels_active)
 
     # "Multiply" all filters to get one combined filter (Booleans are compared
     # with "&"). We start with all entries "True". Then we compare all filters
     # in the filter_list. In the end, only those rows remain "True" which are
     # "True" in all filters.
-    filter_combined = filter_true
-    for filter_i in filter_list:
+    filter_combined = DatEx.filter_true
+    for filter_i in DatEx.filter_list:
         filter_combined = filter_combined & filter_i
 
     # Create a new ColumnDataSource object from the filtered DataFrame
-    source_new = ColumnDataSource(data=df[filter_combined])
+    source_new = ColumnDataSource(data=DatEx.df[filter_combined])
 
     # Update the "data" property of the "source" object with the new data.
     # Once the "source" changes, the figures and glyphs update automagically,
     # thanks to Bokeh's magic.
-    source.data = source_new.data
+    DatEx.source.data = source_new.data
 
     # The 'view' function seemed useful, but may not be flexible enough:
     # - Filtering one "column_name" for multiple "group"s seems not possible
@@ -570,7 +618,7 @@ def update_filters(active, caller, cats, cats_labels,
 #    view.filters = [BooleanFilter(filter_combined)]
 
 
-def update_colors(attr, old, new, df, cats_labels, source):
+def update_colors(attr, old, new, DatEx):
     '''Function associated with the colour category dropdown menu widget.
     The selected colour category label becomes the new "colour_cat".
     'Colours' is a column of both the DataFrame and the source which contains
@@ -595,29 +643,38 @@ def update_colors(attr, old, new, df, cats_labels, source):
 
     '''
     colour_cat = new
+    df = DatEx.df
+    source = DatEx.source
 
-    colourmap = get_colourmap(cats_labels[colour_cat])
+    colourmap = get_colourmap(DatEx.cats_labels[colour_cat])
     df['Legend'] = df[colour_cat]
     df['Colours'] = [colourmap[x] for x in df[colour_cat]]
 
-    source.data['Legend'] = source.data[colour_cat]
+    source.data['Legend'] = DatEx.source.data[colour_cat]
     source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
+    return
 
-def update_gridplot(attr, old, new, vals, source, df, colour_cat, cats):
+
+def update_vals_active(attr, old, new, DatEx):
 
     # Translate the active button positions into chosen category strings:
-    vals_active = [vals[j] for j in new]
+    vals_active = [DatEx.vals[j] for j in new]
 
-    if len(vals_active) > vals_max:
-        message = 'Maximum of '+str(vals_max)+' value columns exceeded.'
-        show_info(message)
+    if len(vals_active) > DatEx.vals_max:
+        message = 'Maximum of '+str(DatEx.vals_max)+' value columns exceeded.'
+        DatEx.show_info(message)
         return
     elif len(vals_active) < 2:
         return
     else:
+        DatEx.vals_active = vals_active
+        update_gridplot(DatEx)
+
+
+def update_gridplot(DatEx):
         # Create a new grid:
-        grid_new = create_plots(source, df, vals_active, colour_cat)
+        grid_new = create_plots(DatEx)
 
         # Get the old grid and the layout containing it from current document:
         grid_old = curdoc().roots[0].tabs[0].child.children[1]
@@ -636,7 +693,7 @@ def update_gridplot(attr, old, new, vals, source, df, colour_cat, cats):
 #        layout_2.children.append(layout(table_new))
 
 
-def update_vals_max(attr, old, new):
+def update_vals_max(attr, old, new, DatEx):
     '''This function is triggered by the "sl_vals_max" slider widget.
     The user input value 'new' is stored in the global variable vals_max.
 
@@ -647,8 +704,22 @@ def update_vals_max(attr, old, new):
         None
 
     '''
-    global vals_max
-    vals_max = int(new)
+    DatEx.vals_max = int(new)
+
+
+def update_combinator(attr, old, new, DatEx):
+    '''This function is triggered by the "sl_comb" slider widget.
+    The user input value 'new' is stored in the global variable combinator.
+
+    Args:
+        new (int) : User text input
+
+    Return:
+        None
+
+    '''
+    DatEx.combinator = new
+    update_gridplot(DatEx)
 
 
 def get_colourmap(categories):
@@ -709,22 +780,22 @@ def load_file_dialog():
     load_file(root.filename)
 
 
-def reload_file(ti_alert):
-    '''This function is triggered by the "load file" button. It asks the
-    ti_alert widget for its current value and hands that to load_file().
+#def reload_file(ti_alert):
+#    '''This function is triggered by the "load file" button. It asks the
+#    ti_alert widget for its current value and hands that to load_file().
+#
+#    Args:
+#        ti_alert (TextInput) : Bokeh widget.
+#
+#    Return:
+#        None
+#
+#    '''
+#    filepath = ti_alert.value
+#    load_file(filepath)
 
-    Args:
-        ti_alert (TextInput) : Bokeh widget.
 
-    Return:
-        None
-
-    '''
-    filepath = ti_alert.value
-    load_file(filepath)
-
-
-def load_file(filepath):
+def load_file(filepath, DatEx):
     '''The chosen file is read into a Pandas DataFrame.
     Supported file types are '.xlsx' and '.xls'. Pandas will also try to read
     in '.csv' files, but can easily fail if the separators are not guessed
@@ -757,32 +828,14 @@ def load_file(filepath):
             raise NotImplementedError('Unsupported file extension: '+filetype)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up messagebox:
-        show_info('File not loaded: '+filepath+' \n'+str(ex))
+        DatEx.show_info('File not loaded: '+filepath+' \n'+str(ex))
         return  # Return, instead of completing the function
 
     logging.debug('Loaded ' + filepath)
 
     data_name = os.path.basename(filepath)
-    create_dataexplorer_UI(df, filepath, data_name)
-
-
-def show_info(message):
-    '''Shows a notification window with given title and message.
-
-    Args:
-        message (str) : Message text.
-
-    Return:
-        None
-
-    '''
-    global ti_alert
-    try:  # The ti_alert widget may not have been created yet
-        timestamp = pd.datetime.now().time().strftime('%H:%M')
-        ti_alert.value = timestamp + ' ' + message
-    except Exception:
-        pass
-    logging.critical(message)  # Bokeh's server logging funtion
+    combinator_last = DatEx.combinator
+    DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
 
 
 '''
@@ -793,10 +846,10 @@ bokeh server. We create an initial set of test data and then create the
 DataExplorer user interface.
 '''
 
-vals_max = 6  # Default for the global variable of maximum value columns
 df = create_test_data()
 data_name = 'Test Data'
 filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
            '\excel_text.xlsx'
 
-create_dataexplorer_UI(df, filepath, data_name)
+#create_dataexplorer_UI(df, filepath, data_name)
+DatEx = Dataexplorer(df, filepath, data_name)

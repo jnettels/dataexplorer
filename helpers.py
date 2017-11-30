@@ -102,7 +102,7 @@ def create_test_data():
     return df
 
 
-def new_upload_button(save_path, callback, label="Upload file"):
+def new_upload_button(save_path, callback, DatEx, label="Upload file"):
     '''
     A button widget that implements a special javascript callback function.
     This callback function makes the browser open a file dialog and allows
@@ -131,7 +131,7 @@ def new_upload_button(save_path, callback, label="Upload file"):
         with open(file_path, "wb") as f:
             f.write(file_contents)
         logging.debug("New file uploaded: " + file_path)
-        callback(file_path)
+        callback(file_path, DatEx)
 
     # This 'source' will be filled by the JavaScript callback
     source = ColumnDataSource({'contents': [], 'name': []})
