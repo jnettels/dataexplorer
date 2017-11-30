@@ -32,6 +32,12 @@ During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
+TODO: HoverTool with categories
+TODO: Choose combinatoric generators
+TODO: Gridplot scrollable
+TODO: Fix axis ranges
+TODO: Horizontal legend on top (+ vertical legend at bottom)
+
 '''
 
 import pandas as pd
@@ -251,6 +257,7 @@ def create_plots(source, df, vals, colour_cat):
 #    legend_fig.legend.location = (0, -30)
 #    legend_fig.legend.visible = False
     legend_fig.legend.margin = 0
+#    legend_fig.legend.orientation = 'horizontal'
     legend_fig.axis.visible = False
     legend_fig.grid.visible = False
     legend_fig.outline_line_color = None
