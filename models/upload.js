@@ -8,8 +8,13 @@ function read_file(filename) {
 
 function load_handler(event) {
     var b64string = event.target.result;
-    source.data = {'contents' : [b64string], 'name':[input.files[0].name]};
-    source.change.emit()
+    if (b64string.length > 10000000) {
+        alert('Error, file '+input.files[0].name+' is too large!');
+    }
+    else{
+        source.data = {'contents' : [b64string], 'name':[input.files[0].name]};
+        source.change.emit()
+    }
 }
 
 function error_handler(evt) {
