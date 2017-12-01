@@ -32,7 +32,6 @@ During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
-TODO: HoverTool with categories
 TODO: Choose combinatoric generators
 TODO: Gridplot scrollable
 TODO: Fix axis ranges
@@ -52,7 +51,7 @@ from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput, Slider
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
-from bokeh.models import CustomJS
+from bokeh.models import CustomJS, HoverTool
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
 from bokeh.plotting import figure
 from bokeh import palettes
@@ -136,7 +135,7 @@ def create_dataexplorer_UI(df, filepath, data_name):
         None
 
     '''
-    DatEx = Dataexplorer(df, filepath, data_name)
+    Dataexplorer(df, filepath, data_name)
 
     # The script ends here (but Bokeh keeps waiting for user input)
 
@@ -238,53 +237,55 @@ def create_plots(self):
 
 #    view = CDSView(source=source, filters=[])  # Create an empty view object
 
-    plot_size_and_tools = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
-                                     'lasso_select', 'box_select', 'save',
-                                     'help'],
-                           'active_scroll': 'wheel_zoom',
-                           'plot_height': 250, 'plot_width': 250,
-                           'lod_factor': 1000,  # level-of-detail decimation
-#                           'output_backend': 'webgl',
-                           }
+    plot_set = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
+                          'lasso_select', 'box_select', 'save', 'help'],
+                'active_scroll': 'wheel_zoom',
+                'plot_height': 250, 'plot_width': 250,
+                'lod_factor': 1000,  # level-of-detail decimation
+                # 'output_backend': 'webgl',
+                }
 
-    glyph_set = {'color': 'Colours',
-                 'fill_alpha': 0.2,
-                 'size': 5
+    glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
+                 'fill_alpha': 0.2, 'hover_alpha': 1,
+                 'size': 5,
                  }
-
-#    bokeh_colormap = CategoricalColorMapper(palette=palette,
-#                                            factors=cats_labels[colour_cat])
-#    colour_def = {'field': colour_cat, 'transform': bokeh_colormap}
 
     # A choice of combinatoric generators with decending number of results:
     if self.combinator == 4:
-        permutation_list = itertools.product(self.vals_active, repeat=2)
+        combis = itertools.product(self.vals_active, repeat=2)
     elif self.combinator == 3:
-        permutation_list = itertools.combinations_with_replacement(
-                self.vals_active, r=2)
+        combis = itertools.combinations_with_replacement(self.vals_active, r=2)
     elif self.combinator == 2:
-        permutation_list = itertools.permutations(self.vals_active, r=2)
+        combis = itertools.permutations(self.vals_active, r=2)
     elif self.combinator == 1:
-        permutation_list = itertools.combinations(self.vals_active, r=2)
+        combis = itertools.combinations(self.vals_active, r=2)
 
     fig_list = []  # List with the complete figures
-    glyph_list = []  # List with the glyphs contained in the figures
-    for permutation in permutation_list:
-        x_val = permutation[0]
-        y_val = permutation[1]
-        if self.df[x_val].dtype == 'datetime64[ns]':
-            p = figure(**plot_size_and_tools, x_axis_type='datetime')
-        elif self.df[y_val].dtype == 'datetime64[ns]':
-            p = figure(**plot_size_and_tools, y_axis_type='datetime')
+    for x_val, y_val in combis:
+        x_time = (self.df[x_val].dtype == 'datetime64[ns]')
+        y_time = (self.df[y_val].dtype == 'datetime64[ns]')
+        if x_time and y_time:
+            p = figure(x_axis_type='datetime', y_axis_type='datetime',
+                       **plot_set)
+        elif x_time:
+            p = figure(x_axis_type='datetime', **plot_set)
+        elif y_time:
+            p = figure(y_axis_type='datetime', **plot_set)
         else:
-            p = figure(**plot_size_and_tools)
+            p = figure(**plot_set)
 
-        glyph = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
+        cr = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
 
         fig_list.append(p)
-        glyph_list.append(glyph)
+
+        # Define the HoverTool options:
+        hover = HoverTool(point_policy='follow_mouse',  # 'snap_to_data',
+                          tooltips=[[cat, '@{'+cat+'}'] for cat in self.cats],
+                          renderers=[cr],  # Uses 'hover_*' options
+                          )
+        p.add_tools(hover)
 
     '''
     The plots are completed, now we add a figure for the legend. Here we remove
@@ -292,12 +293,10 @@ def create_plots(self):
     '''
     legend_top = figure(plot_height=50, plot_width=2000, toolbar_location=None)
     legend_bot = figure(plot_height=500, plot_width=500, toolbar_location=None)
-    legend_top.circle(x=self.vals[0], y=self.vals[1], source=self.source,
-                      **glyph_set, legend='Legend', visible=False)
-    legend_bot.circle(x=self.vals[0], y=self.vals[1], source=self.source,
-                      **glyph_set, legend='Legend', visible=False)
 
     for legend_x in [legend_top, legend_bot]:
+        legend_x.circle(x=self.vals[0], y=self.vals[1], source=self.source,
+                        **glyph_set, legend='Legend', visible=False)
         legend_x.legend.location = 'top_left'
         legend_x.legend.margin = 0
         legend_x.axis.visible = False
@@ -318,9 +317,9 @@ def create_plots(self):
     # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
                     css_classes=['scrollable'],
-#                    sizing_mode='scale_height',
-#                    sizing_mode='scale_both',
-#                    sizing_mode='stretch_both',
+                    #    sizing_mode='scale_height',
+                    #    sizing_mode='scale_both',
+                    #    sizing_mode='stretch_both',
                     )
     self.grid = grid
     self.legend_top = legend_top
@@ -796,7 +795,7 @@ def load_file_dialog():
     load_file(root.filename)
 
 
-#def reload_file(ti_alert):
+# def reload_file(ti_alert):
 #    '''This function is triggered by the "load file" button. It asks the
 #    ti_alert widget for its current value and hands that to load_file().
 #
@@ -867,5 +866,6 @@ data_name = 'Test Data'
 filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
            '\excel_text.xlsx'
 
-#create_dataexplorer_UI(df, filepath, data_name)
 DatEx = Dataexplorer(df, filepath, data_name)
+
+# The script ends here (but Bokeh keeps waiting for user input)
