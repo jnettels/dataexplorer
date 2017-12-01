@@ -76,6 +76,7 @@ class Dataexplorer(object):
         self.filepath = filepath
         self.data_name = data_name
         self.combinator = combinator
+        self.combinator_new = combinator
 
         # Set categories, their labels and value column names
         try:
@@ -210,6 +211,7 @@ def analyse_dataframe(self):
     self.colour_cat = colour_cat
     self.cats_labels = cats_labels
     self.vals_active = vals_active
+    self.vals_active_new = vals_active
 
     return
 
@@ -511,6 +513,7 @@ def create_layout(self):
     tab_2 = Panel(child=layout_2, title='Data Table')
     tab_3 = Panel(child=layout_3, title='Settings')
     tabs = Tabs(tabs=[tab_1, tab_2, tab_3])
+    tabs.on_change('active', partial(callback_tabs, DatEx=self))
 
     curdoc().clear()  # Clear any previous document roots
     curdoc().add_root(tabs)  # Add a new root to the document
@@ -662,8 +665,56 @@ def update_vals_active(attr, old, new, DatEx):
     elif len(vals_active) < 2:
         return
     else:
-        DatEx.vals_active = vals_active
-        update_gridplot(DatEx)
+        DatEx.vals_active_new = vals_active
+
+
+def update_vals_max(attr, old, new, DatEx):
+    '''This function is triggered by the "sl_vals_max" slider widget.
+    The user input value 'new' is stored in the global variable vals_max.
+
+    Args:
+        new (int) : User input
+
+    Return:
+        None
+
+    '''
+    DatEx.vals_max = new
+
+
+def update_combinator(attr, old, new, DatEx):
+    '''This function is triggered by the "sl_comb" slider widget.
+    The user input value 'new' is stored in the global variable combinator.
+
+    Args:
+        new (int) : User input
+
+    Return:
+        None
+
+    '''
+    DatEx.combinator_new = new
+
+
+def callback_tabs(attr, old, new, DatEx):
+    '''This function is triggered by selecting any of the tabs. If the first
+    tab is selected and if the combinator or vals_active were updated since
+    the first tab was used last, the gridplot is regenerated with the new
+    settings.
+
+    Args:
+        new (int) : Number of selected tab.
+
+    Return:
+        None
+
+    '''
+    if new == 0:  # First tab
+        if (DatEx.combinator != DatEx.combinator_new) or \
+          (DatEx.vals_active != DatEx.vals_active_new):
+            DatEx.vals_active = DatEx.vals_active_new
+            DatEx.combinator = DatEx.combinator_new
+            update_gridplot(DatEx)
 
 
 def update_gridplot(DatEx):
@@ -685,35 +736,6 @@ def update_gridplot(DatEx):
 #        layout_2 = curdoc().roots[0].tabs[1].child
 #        layout_2.children.remove(table_old)
 #        layout_2.children.append(layout(table_new))
-
-
-def update_vals_max(attr, old, new, DatEx):
-    '''This function is triggered by the "sl_vals_max" slider widget.
-    The user input value 'new' is stored in the global variable vals_max.
-
-    Args:
-        new (int) : User text input
-
-    Return:
-        None
-
-    '''
-    DatEx.vals_max = int(new)
-
-
-def update_combinator(attr, old, new, DatEx):
-    '''This function is triggered by the "sl_comb" slider widget.
-    The user input value 'new' is stored in the global variable combinator.
-
-    Args:
-        new (int) : User text input
-
-    Return:
-        None
-
-    '''
-    DatEx.combinator = new
-    update_gridplot(DatEx)
 
 
 def get_colourmap(categories):
