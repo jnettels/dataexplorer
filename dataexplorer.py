@@ -36,7 +36,7 @@ TODO: HoverTool with categories
 TODO: Choose combinatoric generators
 TODO: Gridplot scrollable
 TODO: Fix axis ranges
-TODO: Horizontal legend on top (+ vertical legend at bottom)
+TODO: Lines on zero coordinates
 
 '''
 
@@ -242,7 +242,13 @@ def create_plots(self):
                            'active_scroll': 'wheel_zoom',
                            'plot_height': 250, 'plot_width': 250,
                            'lod_factor': 1000,  # level-of-detail decimation
+#                           'output_backend': 'webgl',
                            }
+
+    glyph_set = {'color': 'Colours',
+                 'fill_alpha': 0.2,
+                 'size': 5
+                 }
 
 #    bokeh_colormap = CategoricalColorMapper(palette=palette,
 #                                            factors=cats_labels[colour_cat])
@@ -271,17 +277,10 @@ def create_plots(self):
         else:
             p = figure(**plot_size_and_tools)
 
-        glyph = p.circle(x=x_val, y=y_val, source=self.source,
-                         legend='Legend',
-                         color='Colours',
-                         fill_alpha=0.2,
-                         size=5
-                         )
+        glyph = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
-        p.legend.visible = False
-        p.legend.location = 'top_left'
-        p.legend.click_policy = 'hide'
+
         fig_list.append(p)
         glyph_list.append(glyph)
 
@@ -289,37 +288,31 @@ def create_plots(self):
     The plots are completed, now we add a figure for the legend. Here we remove
     everything but the legend itself. This figure is last in the grid.
     '''
-    legend_fig = figure(plot_height=500, plot_width=500,
-                        toolbar_location=None)
-    legend_glyph = legend_fig.circle(x=self.vals[0], y=self.vals[1],
-                                     source=self.source,
-                                     legend='Legend',
-                                     color='Colours',
-                                     fill_alpha=0.2,
-                                     size=5
-                                     )
-    legend_fig.legend.location = 'top_left'
-#    legend_fig.legend.location = (0, -30)
-#    legend_fig.legend.visible = False
-    legend_fig.legend.margin = 0
-#    legend_fig.legend.orientation = 'horizontal'
-    legend_fig.axis.visible = False
-    legend_fig.grid.visible = False
-    legend_fig.outline_line_color = None
-    legend_glyph.visible = False
-    fig_list.append(legend_fig)
-#    legend_obj = legend_fig.legend[0]
-#    legend_fig.legend.remove(legend_obj)
-#    legend_fig.add_layout(legend_obj, 'right')
+    legend_top = figure(plot_height=50, plot_width=2000, toolbar_location=None)
+    legend_bot = figure(plot_height=500, plot_width=500, toolbar_location=None)
+    legend_top.circle(x=self.vals[0], y=self.vals[1], source=self.source,
+                      **glyph_set, legend='Legend', visible=False)
+    legend_bot.circle(x=self.vals[0], y=self.vals[1], source=self.source,
+                      **glyph_set, legend='Legend', visible=False)
+
+    for legend_x in [legend_top, legend_bot]:
+        legend_x.legend.location = 'top_left'
+        legend_x.legend.margin = 0
+        legend_x.axis.visible = False
+        legend_x.grid.visible = False
+        legend_x.outline_line_color = None
+
+    legend_top.legend.orientation = 'horizontal'
+    fig_list.append(legend_bot)
 
     # Get the number of grid columns from the rounded square root of number of
-    # figures. But only use a maximum of 6 columns.
+    # figures.
     if self.combinator == 4:
-        n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0)))
+        n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))
     elif self.combinator == 2:
-        n_grid_cols = min(6, int(round(np.sqrt(len(fig_list)), 0))-1)
+        n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))-1
     else:
-        n_grid_cols = min(6, int((np.sqrt(len(fig_list)))) + 1)
+        n_grid_cols = int(round(np.sqrt(len(fig_list)))) + 1
     # Create the final grid of figures
     grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
                     css_classes=['scrollable'],
@@ -328,6 +321,7 @@ def create_plots(self):
 #                    sizing_mode='stretch_both',
                     )
     self.grid = grid
+    self.legend_top = legend_top
     return self.grid
 
 
@@ -509,7 +503,7 @@ def create_layout(self):
     Return:
         None
     '''
-    layout_1 = layout([self.wb_list_1, self.grid])
+    layout_1 = layout([self.wb_list_1, self.legend_top, self.grid])
     layout_2 = layout(self.data_table)
     layout_3 = layout(self.wb_list_2)
 
@@ -650,7 +644,7 @@ def update_colors(attr, old, new, DatEx):
     df['Legend'] = df[colour_cat]
     df['Colours'] = [colourmap[x] for x in df[colour_cat]]
 
-    source.data['Legend'] = DatEx.source.data[colour_cat]
+    source.data['Legend'] = source.data[colour_cat]
     source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
 
     return
@@ -677,7 +671,7 @@ def update_gridplot(DatEx):
         grid_new = create_plots(DatEx)
 
         # Get the old grid and the layout containing it from current document:
-        grid_old = curdoc().roots[0].tabs[0].child.children[1]
+        grid_old = curdoc().roots[0].tabs[0].child.children[2]
 #        grid_old = curdoc().get_model_by_name('plot_grid')  # Does not work
         layout_1 = curdoc().roots[0].tabs[0].child
 
