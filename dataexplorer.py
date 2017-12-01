@@ -35,7 +35,6 @@ is required for the batch file to work.
 TODO: Choose combinatoric generators
 TODO: Gridplot scrollable
 TODO: Fix axis ranges
-TODO: Lines on zero coordinates
 
 '''
 
@@ -49,9 +48,9 @@ from bokeh.layouts import row
 # from bokeh.layouts import column
 from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
-from bokeh.models.widgets import Panel, Tabs, TextInput, Slider
+from bokeh.models.widgets import Panel, Tabs, TextInput, Slider, Toggle
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
-from bokeh.models import CustomJS, HoverTool
+from bokeh.models import CustomJS, HoverTool, Span
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
 from bokeh.plotting import figure
 from bokeh import palettes
@@ -244,11 +243,11 @@ def create_plots(self):
                 'lod_factor': 1000,  # level-of-detail decimation
                 # 'output_backend': 'webgl',
                 }
-
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
                  'fill_alpha': 0.2, 'hover_alpha': 1,
-                 'size': 5,
-                 }
+                 'size': 5}
+    span_set = {'location': 0, 'line_color': 'grey',
+                'line_dash': 'dashed', 'line_width': 1}
 
     # A choice of combinatoric generators with decending number of results:
     if self.combinator == 4:
@@ -261,6 +260,7 @@ def create_plots(self):
         combis = itertools.combinations(self.vals_active, r=2)
 
     fig_list = []  # List with the complete figures
+    self.span_list = []
     for x_val, y_val in combis:
         x_time = (self.df[x_val].dtype == 'datetime64[ns]')
         y_time = (self.df[y_val].dtype == 'datetime64[ns]')
@@ -286,6 +286,14 @@ def create_plots(self):
                           renderers=[cr],  # Uses 'hover_*' options
                           )
         p.add_tools(hover)
+
+        # Add horizontal and vertical lines in the center coordinates
+        span_h = Span(**span_set, dimension='height')
+        span_w = Span(**span_set, dimension='width')
+        self.span_list.append(span_h)
+        self.span_list.append(span_w)
+        p.add_layout(span_h)
+        p.add_layout(span_w)
 
     '''
     The plots are completed, now we add a figure for the legend. Here we remove
@@ -413,9 +421,7 @@ def create_widgets_2(self):
 #    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
 
     # Second implementation
-    div1 = Div(text='''<div style="position:relative; top:5px">
-                  Upload a new file to the server:
-                  </div>''', width=600)
+    div1 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
     div2 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
     div3 = Div(text='''<div style="position:relative; top:15px">
                Select the value columns used in the plots:
@@ -425,7 +431,12 @@ def create_widgets_2(self):
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    but_load_new = new_upload_button(save_path, load_file, self)
+    but_load_new = new_upload_button(save_path, load_file, self,
+                                     label='Upload a new file to the server')
+
+    tgl_coords = Toggle(label='Toggle coordinate center lines',
+                        active=True)
+    tgl_coords.on_click(partial(update_coords, DatEx=self))
 
     sl_vals_max = Slider(start=2, end=len(self.vals), step=1,
                          value=min(self.vals_max, len(self.vals)),
@@ -446,7 +457,7 @@ def create_widgets_2(self):
     cg = CheckboxGroup(labels=self.vals, active=active_list)
     cg.on_change('active', partial(update_vals_active, DatEx=self))
 
-    wb = widgetbox(div1, but_load_new, div2, sl_vals_max, sl_comb,
+    wb = widgetbox(but_load_new, div1, tgl_coords, div2, sl_comb, sl_vals_max,
                    div3, cg, div4, self.ti_alert)
     self.wb_list_2 = [wb]
 
@@ -665,6 +676,11 @@ def update_vals_active(attr, old, new, DatEx):
         return
     else:
         DatEx.vals_active_new = vals_active
+
+
+def update_coords(active, DatEx):
+    for span in DatEx.span_list:
+        span.visible = active
 
 
 def update_vals_max(attr, old, new, DatEx):
