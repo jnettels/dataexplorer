@@ -8,7 +8,8 @@ The DataExplorer should help you explore correlations within your data. It
 features a user interface that shows scatter plots of all the variables in
 your data. Categories found in your data can be used to filter the views.
 
-You can start this program with the "start_bokeh.cmd" batch file.
+You can start this program with the "start_bokeh.cmd" batch file. This starts
+a Bokeh server that can be accessed from any computer in the network.
 
 Alternatively, you can start it with your own command prompt in Windows:
     - Go to Start and type "cmd"
@@ -32,9 +33,9 @@ During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
-TODO: Choose combinatoric generators
 TODO: Gridplot scrollable
 TODO: Fix axis ranges
+TODO: Highlight a plot (e.g. add red border) by clicking on it
 
 '''
 
@@ -75,6 +76,7 @@ class Dataexplorer(object):
         self.data_name = data_name
         self.combinator = combinator
         self.combinator_new = combinator
+        self.c_size = 5
 
         # Set categories, their labels and value column names
         try:
@@ -245,7 +247,7 @@ def create_plots(self):
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
                  'fill_alpha': 0.2, 'hover_alpha': 1,
-                 'size': 5}
+                 'size': self.c_size}
     span_set = {'location': 0, 'line_color': 'grey',
                 'line_dash': 'dashed', 'line_width': 1}
 
@@ -259,7 +261,8 @@ def create_plots(self):
     elif self.combinator == 1:
         combis = itertools.combinations(self.vals_active, r=2)
 
-    fig_list = []  # List with the complete figures
+    self.fig_list = []  # List with the complete figures
+    self.glyph_list = []
     self.span_list = []
     for x_val, y_val in combis:
         x_time = (self.df[x_val].dtype == 'datetime64[ns]')
@@ -278,7 +281,8 @@ def create_plots(self):
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
 
-        fig_list.append(p)
+        self.fig_list.append(p)
+        self.glyph_list.append(cr)
 
         # Define the HoverTool options:
         hover = HoverTool(point_policy='follow_mouse',  # 'snap_to_data',
@@ -312,18 +316,18 @@ def create_plots(self):
         legend_x.outline_line_color = None
 
     legend_top.legend.orientation = 'horizontal'
-    fig_list.append(legend_bot)
+    self.fig_list.append(legend_bot)
 
     # Get the number of grid columns from the rounded square root of number of
     # figures.
     if self.combinator == 4:
-        n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))
+        n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))
     elif self.combinator == 2:
-        n_grid_cols = int(round(np.sqrt(len(fig_list)), 0))-1
+        n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))-1
     else:
-        n_grid_cols = int(round(np.sqrt(len(fig_list)))) + 1
+        n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
     # Create the final grid of figures
-    grid = gridplot(fig_list, ncols=n_grid_cols, toolbar_location='left',
+    grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
                     css_classes=['scrollable'],
                     #    sizing_mode='scale_height',
                     #    sizing_mode='scale_both',
@@ -438,6 +442,11 @@ def create_widgets_2(self):
                         active=True)
     tgl_coords.on_click(partial(update_coords, DatEx=self))
 
+    sl_c_size = Slider(start=1, end=20, step=1,
+                       value=self.c_size,
+                       title='Set the size of the scatter points')
+    sl_c_size.on_change('value', partial(update_c_size, DatEx=self))
+
     sl_vals_max = Slider(start=2, end=len(self.vals), step=1,
                          value=min(self.vals_max, len(self.vals)),
                          title='Set the maximum number of value columns')
@@ -457,8 +466,8 @@ def create_widgets_2(self):
     cg = CheckboxGroup(labels=self.vals, active=active_list)
     cg.on_change('active', partial(update_vals_active, DatEx=self))
 
-    wb = widgetbox(but_load_new, div1, tgl_coords, div2, sl_comb, sl_vals_max,
-                   div3, cg, div4, self.ti_alert)
+    wb = widgetbox(but_load_new, div1, tgl_coords, div2, sl_c_size, sl_comb,
+                   sl_vals_max, div3, cg, div4, self.ti_alert)
     self.wb_list_2 = [wb]
 
     return
@@ -681,6 +690,12 @@ def update_vals_active(attr, old, new, DatEx):
 def update_coords(active, DatEx):
     for span in DatEx.span_list:
         span.visible = active
+
+
+def update_c_size(attr, old, new, DatEx):
+    DatEx.c_size = new
+    for glpyh_renderer in DatEx.glyph_list:
+        glpyh_renderer.glyph.size = DatEx.c_size
 
 
 def update_vals_max(attr, old, new, DatEx):
