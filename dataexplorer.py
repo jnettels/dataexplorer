@@ -292,8 +292,8 @@ def create_plots(self):
         p.add_tools(hover)
 
         # Add horizontal and vertical lines in the center coordinates
-        span_h = Span(**span_set, dimension='height')
-        span_w = Span(**span_set, dimension='width')
+        span_h = Span(**span_set, dimension='height', level='underlay')
+        span_w = Span(**span_set, dimension='width', level='underlay')
         self.span_list.append(span_h)
         self.span_list.append(span_w)
         p.add_layout(span_h)
