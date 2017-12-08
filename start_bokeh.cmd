@@ -11,7 +11,7 @@ rem # Read command line option #1 as port number (or set 80 to default):
 set port=%1
 if not defined port set port=80
 
-rem # Read command line option #2 as log-level (default is 'warning'):
+rem # Read command line option #2 as log-level (default is 'critical'):
 rem # 'log-level' can be one of: trace, debug, info, warning, error or critical
 set loglevel=%2
 if not defined loglevel set loglevel=critical
@@ -21,6 +21,6 @@ echo - For local access type "localhost:%port%/dataexplorer" in local browser.
 echo - For remote access type "%IP%:%port%/dataexplorer" in remote browser.
 
 rem # Start Bokeh server with enabled remote access and the given log-level
-bokeh serve dataexplorer.py --show --allow-websocket-origin localhost:%port% ^
+bokeh serve ..\dataexplorer --show --allow-websocket-origin localhost:%port% ^
  --allow-websocket-origin %ip%:%port% --port %port% ^
  --log-level %loglevel%

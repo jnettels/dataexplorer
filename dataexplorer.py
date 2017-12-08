@@ -46,7 +46,7 @@ import os
 import logging
 from bokeh.layouts import widgetbox, gridplot, layout
 from bokeh.layouts import row
-# from bokeh.layouts import column
+from bokeh.layouts import column
 from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput, Slider, Toggle
@@ -165,12 +165,12 @@ def analyse_dataframe(self):
     columns = df.columns.values.tolist()
     cats = []
     vals = []
-    for column in columns:
+    for column_ in columns:
         # The column contains categories or values
-        if df[column].dtype == object or is_categorical_dtype(df[column]):
-            cats.append(column)
+        if df[column_].dtype == object or is_categorical_dtype(df[column_]):
+            cats.append(column_)
         else:
-            vals.append(column)
+            vals.append(column_)
 
     if cats == []:
         raise LookupError('No category columns found in the file! Please ' +
@@ -328,11 +328,12 @@ def create_plots(self):
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
     # Create the final grid of figures
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
-                    css_classes=['scrollable'],
                     #    sizing_mode='scale_height',
                     #    sizing_mode='scale_both',
                     #    sizing_mode='stretch_both',
                     )
+    grid = column(grid, sizing_mode='fixed', height=645, width=1850,
+                  css_classes=['scrollable'])
     self.grid = grid
     self.legend_top = legend_top
     return self.grid
@@ -496,7 +497,7 @@ def create_data_table(self):
 
     data_table = DataTable(source=self.source, columns=dt_columns,
                            fit_columns=True,
-                           width=1400,
+                           width=1850,
                            height=800,
                            scroll_to_selection=False,
                            sortable=True,  # editable=True,
