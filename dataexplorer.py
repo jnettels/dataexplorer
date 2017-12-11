@@ -894,7 +894,7 @@ DataExplorer user interface.
 '''
 
 df = create_test_data()
-data_name = 'Test Data'
+data_name = 'Example Data'
 filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
            '\excel_text.xlsx'
 

@@ -1,11 +1,28 @@
 # -*- coding: utf-8 -*-
 
 '''
+The DataExplorer should help you explore correlations within your data. It
+features a user interface that shows scatter plots of all the variables in
+your data. Categories found in your data can be used to filter the views.
+
+You can start this program with the "start_bokeh.cmd" batch file. This starts
+a Bokeh server that can be accessed from any computer in the network.
+
 This Python script 'main.py' is called if 'Bokeh serve' is used with the
 folder name instead of a file name.
 
-By exporting it, the script 'dataexplorer.py' is executed. This is all we
-need to to here.
+We create an initial set of example data and then create the
+DataExplorer user interface.
 '''
 
-import dataexplorer
+from helpers import create_test_data
+from dataexplorer import Dataexplorer
+
+df = create_test_data()
+data_name = 'Example Data'
+filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
+           '\excel_text.xlsx'
+
+DatEx = Dataexplorer(df, filepath, data_name)
+
+# The script ends here (but Bokeh keeps waiting for user input)
