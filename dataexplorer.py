@@ -201,8 +201,10 @@ def analyse_dataframe(self):
     self.vals = vals
     self.cats = cats
     self.cats_labels = cats_labels
-    self.vals_active = vals_active
+    self.vals_active = vals_active  # vals_active for gridplot
+    self.vals_active_dt = vals_active  # vals_active for datatable
     self.vals_active_new = vals_active
+    self.vals_active_dt_new = vals_active
 
     # The first category label is the default colour category
     self.colour_cat = cats[0]
@@ -522,7 +524,7 @@ def create_data_table(self):
 def create_data_table_columns(self):
     self.dt_columns = []
 
-    for name in self.cats + self.vals_active_new:
+    for name in self.cats + self.vals_active_dt:
         if self.df[name].dtype == 'datetime64[ns]':
             dt_column = TableColumn(field=name, title=name,
                                     formatter=DateFormatter())
@@ -726,6 +728,7 @@ def update_vals_active(attr, old, new, DatEx):
         return
     else:
         DatEx.vals_active_new = vals_active
+        DatEx.vals_active_dt_new = vals_active
 
 
 def update_coords(active, DatEx):
@@ -788,7 +791,9 @@ def callback_tabs(attr, old, new, DatEx):
             update_gridplot(DatEx)
 
     elif new == 1:  # Second tab
-        update_table(DatEx)
+        if (DatEx.vals_active_dt != DatEx.vals_active_dt_new):
+            DatEx.vals_active_dt = DatEx.vals_active_dt_new
+            update_table(DatEx)
 
 
 def update_gridplot(DatEx):
@@ -941,4 +946,4 @@ def main_debug():
 
     Dataexplorer(df, filepath, data_name)
 
-#main_debug()
+# main_debug()
