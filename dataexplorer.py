@@ -328,10 +328,13 @@ def create_plots(self):
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
     # Create the final grid of figures
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
+                    toolbar_options={'logo': None}
                     #    sizing_mode='scale_height',
                     #    sizing_mode='scale_both',
                     #    sizing_mode='stretch_both',
                     )
+    # This creates a DIV element with the CSS class 'scrollable'. Together with
+    # index.html this allows the gridplot to become a scrollable box.
     grid = column(grid, sizing_mode='fixed', height=645, width=1850,
                   css_classes=['scrollable'])
     self.grid = grid
