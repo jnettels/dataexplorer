@@ -477,7 +477,6 @@ def create_widgets_2(self):
 
 def create_data_table(self):
     '''Create and return the DataTable widget.
-    TODO: Only show vals_active
 
     Args:
         source (ColumnDataSource) : The Bokeh source object
@@ -486,17 +485,9 @@ def create_data_table(self):
         data_table (DataTable) : Bokeh DataTable widget.
 
     '''
-    dt_columns = []
+    create_data_table_columns(self)
 
-    for name in self.cats + self.vals:
-        if self.df[name].dtype == 'datetime64[ns]':
-            dt_column = TableColumn(field=name, title=name,
-                                    formatter=DateFormatter())
-        else:
-            dt_column = TableColumn(field=name, title=name)
-        dt_columns.append(dt_column)
-
-    data_table = DataTable(source=self.source, columns=dt_columns,
+    data_table = DataTable(source=self.source, columns=self.dt_columns,
                            fit_columns=True,
                            width=1850,
                            height=800,
@@ -504,7 +495,21 @@ def create_data_table(self):
                            sortable=True,  # editable=True,
                            )
     self.data_table = data_table
-    return
+    return self.data_table
+
+
+def create_data_table_columns(self):
+    self.dt_columns = []
+
+    for name in self.cats + self.vals_active_new:
+        if self.df[name].dtype == 'datetime64[ns]':
+            dt_column = TableColumn(field=name, title=name,
+                                    formatter=DateFormatter())
+        else:
+            dt_column = TableColumn(field=name, title=name)
+        self.dt_columns.append(dt_column)
+
+    return self.dt_columns
 
 
 def create_layout(self):
@@ -756,31 +761,32 @@ def callback_tabs(attr, old, new, DatEx):
     '''
     if new == 0:  # First tab
         if (DatEx.combinator != DatEx.combinator_new) or \
-          (DatEx.vals_active != DatEx.vals_active_new):
+           (DatEx.vals_active != DatEx.vals_active_new):
             DatEx.vals_active = DatEx.vals_active_new
             DatEx.combinator = DatEx.combinator_new
             update_gridplot(DatEx)
 
+    elif new == 1:  # Second tab
+        update_table(DatEx)
+
 
 def update_gridplot(DatEx):
-        # Create a new grid:
-        grid_new = create_plots(DatEx)
+    # Create a new grid:
+    grid_new = create_plots(DatEx)
 
-        # Get the old grid and the layout containing it from current document:
-        grid_old = curdoc().roots[0].tabs[0].child.children[2]
-#        grid_old = curdoc().get_model_by_name('plot_grid')  # Does not work
-        layout_1 = curdoc().roots[0].tabs[0].child
+    # Get the old grid and the layout containing it from current document:
+    grid_old = curdoc().roots[0].tabs[0].child.children[2]
+#    grid_old = curdoc().get_model_by_name('plot_grid')  # Does not work
+    layout_1 = curdoc().roots[0].tabs[0].child
 
-        # The children of a layout can be treated like a list:
-        layout_1.children.remove(grid_old)
-        layout_1.children.append(grid_new)
+    # The children of a layout can be treated like a list:
+    layout_1.children.remove(grid_old)
+    layout_1.children.append(grid_new)
 
-#        table_old = curdoc().roots[0].tabs[1].child.children[0]
-#        print(table_old)
-#        table_new = create_data_table(source, df, cats, vals_active)
-#        layout_2 = curdoc().roots[0].tabs[1].child
-#        layout_2.children.remove(table_old)
-#        layout_2.children.append(layout(table_new))
+
+def update_table(DatEx):
+    create_data_table_columns(DatEx)
+    DatEx.data_table.columns = DatEx.dt_columns
 
 
 def get_colourmap(categories):
