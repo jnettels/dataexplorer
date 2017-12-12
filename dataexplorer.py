@@ -63,6 +63,9 @@ from pandas.api.types import is_categorical_dtype
 # My own library of functions from the file helpers.py
 from helpers import new_upload_button, create_test_data
 
+# Global Pandas option for displaying terminal output
+pd.set_option('display.expand_frame_repr', False)
+
 
 class Dataexplorer(object):
     '''Dataexplorer class'''
@@ -557,16 +560,16 @@ def prepare_filter(self):
     Return:
         filter_list (List) : List containing all the filters, one for each
             category.
-        filter_true (List) : A list with the length of one column, where all
-            entries are "True".
+        filter_true (Series) : A Pandas series with the length of one column,
+            where all entries are "True".
 
     '''
-    filter_list = []
+    filter_list = []  # List of Pandas series
     filter_true = []  # Define here, overwrite below, so we can use again later
     for cat in self.cats:
         labels = self.cats_labels[cat]
-        filter_true = self.df[cat].isin(labels)
-        filter_list.append(filter_true)
+        filter_true = self.df[cat].isin(labels)  # Pandas series
+        filter_list.append(filter_true)  # List of Pandas series
 
     self.filter_list = filter_list
     self.filter_true = filter_true
@@ -632,8 +635,11 @@ def update_filters(active, caller, DatEx):
 def update_CDS(DatEx):
     '''Update the ColumnDataSource object
     '''
+    # The order of df may have changed due to sorting by the colour_cat.
+    # Thus the order of filter_combined and the df have to be matched
+    filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
     # Create a new ColumnDataSource object from the filtered DataFrame
-    source_new = ColumnDataSource(data=DatEx.df[DatEx.filter_combined])
+    source_new = ColumnDataSource(data=DatEx.df[filter_combined_ri])
 
     # Update the "data" property of the "source" object with the new data.
     # Once the "source" changes, the figures and glyphs update automagically,
