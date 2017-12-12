@@ -33,9 +33,9 @@ During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
-TODO: Gridplot scrollable
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
+TODO: Sort legend entries
 
 '''
 
@@ -335,7 +335,7 @@ def create_plots(self):
                     )
     # This creates a DIV element with the CSS class 'scrollable'. Together with
     # index.html this allows the gridplot to become a scrollable box.
-    grid = column(grid, sizing_mode='fixed', height=645, width=1850,
+    grid = column(grid, sizing_mode='fixed', height=750, width=1850,
                   css_classes=['scrollable'])
     self.grid = grid
     self.legend_top = legend_top
