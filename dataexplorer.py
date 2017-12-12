@@ -265,16 +265,36 @@ def create_plots(self):
     for x_val, y_val in combis:
         x_time = (self.df[x_val].dtype == 'datetime64[ns]')
         y_time = (self.df[y_val].dtype == 'datetime64[ns]')
+
+        # Prepare the HoverTool options:
+        formatters_dict = {}
+        tips_list = [[cat, '@{'+cat+'}'] for cat in self.cats]
+
+        # DateTime columns require some very special treatment
+        strftime = '%y-%m-%d %H:%M:%S'  # date and time format
         if x_time and y_time:
             p = figure(x_axis_type='datetime', y_axis_type='datetime',
                        **plot_set)
+            formatters_dict[x_val] = 'datetime'
+            formatters_dict[y_val] = 'datetime'
+            tips_list.append([x_val, '@{'+x_val+'}{'+strftime+'}'])
+            tips_list.append([y_val, '@{'+y_val+'}{'+strftime+'}'])
         elif x_time:
             p = figure(x_axis_type='datetime', **plot_set)
+            formatters_dict[x_val] = 'datetime'
+            tips_list.append([x_val, '@{'+x_val+'}{'+strftime+'}'])
+            tips_list.append([y_val, '@{'+y_val+'}'])
         elif y_time:
             p = figure(y_axis_type='datetime', **plot_set)
+            formatters_dict[y_val] = 'datetime'
+            tips_list.append([x_val, '@{'+x_val+'}'])
+            tips_list.append([y_val, '@{'+y_val+'}{'+strftime+'}'])
         else:
             p = figure(**plot_set)
+            tips_list.append([x_val, '@{'+x_val+'}'])
+            tips_list.append([y_val, '@{'+y_val+'}'])
 
+        # Create the actual circle GlyphRenderer
         cr = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
@@ -282,10 +302,11 @@ def create_plots(self):
         self.fig_list.append(p)
         self.glyph_list.append(cr)
 
-        # Define the HoverTool options:
+        # Create HoverTool:
         hover = HoverTool(point_policy='follow_mouse',  # 'snap_to_data',
-                          tooltips=[[cat, '@{'+cat+'}'] for cat in self.cats],
+                          tooltips=tips_list,
                           renderers=[cr],  # Uses 'hover_*' options
+                          formatters=formatters_dict
                           )
         p.add_tools(hover)
 
@@ -905,19 +926,19 @@ def load_file(filepath, DatEx):
     DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
 
 
-'''
-Main function:
+def main_debug():
+    '''
+    Main function for debugging purposes:
 
-The following lines are executed when the python script is started by the
-bokeh server. We create an initial set of test data and then create the
-DataExplorer user interface.
-'''
+    The following lines are executed when the python script is started with
+    Python. We create an initial set of test data and then create the
+    DataExplorer user interface. Does not produce an output.
+    '''
+    df = create_test_data()
+    data_name = 'Example Data'
+    filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
+               '\excel_text.xlsx'
 
-df = create_test_data()
-data_name = 'Example Data'
-filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
-           '\excel_text.xlsx'
+    Dataexplorer(df, filepath, data_name)
 
-DatEx = Dataexplorer(df, filepath, data_name)
-
-# The script ends here (but Bokeh keeps waiting for user input)
+#main_debug()
