@@ -35,7 +35,6 @@ is required for the batch file to work.
 
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
-TODO: Sort legend entries
 
 '''
 
@@ -191,15 +190,6 @@ def analyse_dataframe(self):
             pass
 #        print(cat, cats_labels[cat])
 
-    # Set the colours as a column of the DataFrame:
-    colour_cat = cats[0]  # The first colour category label is the default
-    colourmap = get_colourmap(cats_labels[colour_cat])
-    colour_list = [colourmap[x] for x in df[colour_cat]]
-    df['Legend'] = df[colour_cat]
-    df['Colours'] = colour_list
-
-    source = ColumnDataSource(data=df)  # Create the ColumnDataSource object
-
     if len(vals) > self.vals_max:
         vals_active = vals[:self.vals_max]
     else:
@@ -207,11 +197,16 @@ def analyse_dataframe(self):
 
     self.vals = vals
     self.cats = cats
-    self.source = source
-    self.colour_cat = colour_cat
     self.cats_labels = cats_labels
     self.vals_active = vals_active
     self.vals_active_new = vals_active
+
+    # The first category label is the default colour category
+    self.colour_cat = cats[0]
+    # Create / update 'Legend' and 'Colours' columns
+    update_colours(self)
+    # Create the ColumnDataSource object
+    self.source = ColumnDataSource(data=df)
 
     return
 
@@ -377,7 +372,7 @@ def create_widgets_1(self):
 
     sel = Select(title='Category label for colours:', value=self.colour_cat,
                  options=self.cats)
-    sel.on_change('value', partial(update_colors, DatEx=self))
+    sel.on_change('value', partial(update_colour_cat, DatEx=self))
 
     # Prepare the layout of the widgets:
     # Create rows with pairs of Div() and CheckboxButtonGroup(), where the
@@ -575,6 +570,7 @@ def prepare_filter(self):
 
     self.filter_list = filter_list
     self.filter_true = filter_true
+    self.filter_combined = filter_true
     return
 
 
@@ -620,14 +616,9 @@ def update_filters(active, caller, DatEx):
     filter_combined = DatEx.filter_true
     for filter_i in DatEx.filter_list:
         filter_combined = filter_combined & filter_i
+    DatEx.filter_combined = filter_combined
 
-    # Create a new ColumnDataSource object from the filtered DataFrame
-    source_new = ColumnDataSource(data=DatEx.df[filter_combined])
-
-    # Update the "data" property of the "source" object with the new data.
-    # Once the "source" changes, the figures and glyphs update automagically,
-    # thanks to Bokeh's magic.
-    DatEx.source.data = source_new.data
+    update_CDS(DatEx)  # Apply the new filter_combined
 
     # The 'view' function seemed useful, but may not be flexible enough:
     # - Filtering one "column_name" for multiple "group"s seems not possible
@@ -638,9 +629,29 @@ def update_filters(active, caller, DatEx):
 #    view.filters = [BooleanFilter(filter_combined)]
 
 
-def update_colors(attr, old, new, DatEx):
+def update_CDS(DatEx):
+    '''Update the ColumnDataSource object
+    '''
+    # Create a new ColumnDataSource object from the filtered DataFrame
+    source_new = ColumnDataSource(data=DatEx.df[DatEx.filter_combined])
+
+    # Update the "data" property of the "source" object with the new data.
+    # Once the "source" changes, the figures and glyphs update automagically,
+    # thanks to Bokeh's magic.
+    DatEx.source.data = source_new.data
+
+
+def update_colour_cat(attr, old, new, DatEx):
     '''Function associated with the colour category dropdown menu widget.
     The selected colour category label becomes the new "colour_cat".
+    '''
+    DatEx.colour_cat = new  # Save the new colour_cat
+    update_colours(DatEx)  # Update the DataFrame
+    update_CDS(DatEx)  # Update the ColumnDataSource
+
+
+def update_colours(DatEx):
+    '''
     'Colours' is a column of both the DataFrame and the source which contains
     the current colours. It is updated, just like the 'Legend' column.
 
@@ -662,16 +673,10 @@ def update_colors(attr, old, new, DatEx):
         None
 
     '''
-    colour_cat = new
-    df = DatEx.df
-    source = DatEx.source
-
-    colourmap = get_colourmap(DatEx.cats_labels[colour_cat])
-    df['Legend'] = df[colour_cat]
-    df['Colours'] = [colourmap[x] for x in df[colour_cat]]
-
-    source.data['Legend'] = source.data[colour_cat]
-    source.data['Colours'] = [colourmap[x] for x in source.data[colour_cat]]
+    colourmap = get_colourmap(DatEx.cats_labels[DatEx.colour_cat])
+    DatEx.df.sort_values(by=[DatEx.colour_cat], inplace=True)
+    DatEx.df['Legend'] = DatEx.df[DatEx.colour_cat]
+    DatEx.df['Colours'] = [colourmap[x] for x in DatEx.df[DatEx.colour_cat]]
 
     return
 
