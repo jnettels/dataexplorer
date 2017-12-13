@@ -491,9 +491,14 @@ def create_widgets_2(self):
     cg = CheckboxGroup(labels=self.vals, active=active_list)
     cg.on_change('active', partial(update_vals_active, DatEx=self))
 
-    wb = widgetbox(but_load_new, div1, tgl_coords, div2, sl_c_size, sl_comb,
-                   sl_vals_max, div3, cg, div4, self.ti_alert)
-    self.wb_list_2 = [wb]
+    cg_col = column(cg, sizing_mode='fixed', height=500, width=950,
+                    css_classes=['scrollable'])
+
+    wb = [widgetbox(but_load_new, div1, tgl_coords, div2, sl_c_size, sl_comb,
+                    sl_vals_max, div3),
+          cg_col,
+          widgetbox(div4, self.ti_alert)]
+    self.wb_list_2 = wb
 
     return
 
@@ -931,11 +936,11 @@ def load_file(filepath, DatEx):
     DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
 
 
-def main_debug():
+if __name__ == "__main__":
     '''
     Main function for debugging purposes:
 
-    The following lines are executed when the python script is started with
+    This function is executed when the script is started directly with
     Python. We create an initial set of test data and then create the
     DataExplorer user interface. Does not produce an output.
     '''
@@ -945,5 +950,3 @@ def main_debug():
                '\excel_text.xlsx'
 
     Dataexplorer(df, filepath, data_name)
-
-# main_debug()
