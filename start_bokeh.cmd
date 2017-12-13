@@ -24,3 +24,9 @@ rem # Start Bokeh server with enabled remote access and the given log-level
 bokeh serve ..\dataexplorer --show --allow-websocket-origin localhost:%port% ^
  --allow-websocket-origin %ip%:%port% --port %port% ^
  --log-level %loglevel%
+
+rem # How to add this script to the taskbar:
+rem # Add a shortcut to cmd.exe to the taskbar, then modify its properties:
+rem # - target: C:\WINDOWS\system32\cmd.exe /C start_bokeh.cmd 80 info
+rem # - run in: "C:\Users\nettelstroth\Documents\07 Python\DataExplorer"
+rem #
