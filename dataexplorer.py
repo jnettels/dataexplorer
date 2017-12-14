@@ -59,6 +59,7 @@ from functools import partial
 from tkinter import Tk, filedialog  # , messagebox
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
+from bokeh.io import export_png, export_svgs
 
 # My own library of functions from the file helpers.py
 from helpers import new_upload_button, create_test_data
@@ -934,6 +935,38 @@ def load_file(filepath, DatEx):
     data_name = os.path.basename(filepath)
     combinator_last = DatEx.combinator
     DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
+
+
+def export_figs(DatEx, fig_sel=None, ftype='.png'):
+    '''Export a specific or all figures to files of a given file type.
+
+    Args:
+        DatEx (Dataexplorer) : The Dataexplorer object.
+
+        fig_sel (figure, optional) : A Bokeh figure. If None, all figures are
+            exportet.
+
+        ftype (str, optional) : A string defining the file type extension.
+
+    Returns:
+        None
+    '''
+    out_folder = os.path.join(os.path.dirname(__file__), 'export')
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+
+    if fig_sel is None:
+        export_list = DatEx.fig_list
+    else:
+        export_list = [fig_sel]
+
+    for i, fig in enumerate(export_list):
+        out_file = os.path.join(out_folder, str(i)+ftype)
+        if ftype == '.png':  # Export as raster graphic
+            export_png(fig, filename=out_file)
+        elif ftype == '.svg':  # Export as vector graphic
+            fig.output_backend = "svg"
+            export_svgs(fig, filename=out_file)
 
 
 if __name__ == "__main__":
