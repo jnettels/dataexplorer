@@ -1,22 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-      <link id="favicon" rel="shortcut icon" type="image/png" sizes="32x32" href="dataexplorer/static/favicon-32x32.png">
-      <style>
-          div.scrollable {
-              overflow: auto;
-          }
-      </style>
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/0.10.0/lodash.min.js"></script>
-    <meta charset="utf-8">
-    {{ bokeh_css }}
-    {{ bokeh_js }}
-  </head>
-
-  <body>
-    <div class="content" style="overflow:hidden;">
-      {{ plot_div|indent(8) }}
-    </div>
-    {{ plot_script|indent(8) }}
-  </body>
+    <head>
+        <link id="favicon" rel="shortcut icon" type="image/png"
+            sizes="32x32" href="dataexplorer/static/favicon-32x32.png">
+        <style>
+            div.scrollable {
+                overflow: auto;
+            }
+        </style>
+        <meta charset="utf-8">
+        {{ bokeh_css }}
+        {{ bokeh_js }}
+    </head>
+    <body>
+        {{ plot_div|indent(8) }}
+        {{ plot_script|indent(8) }}
+    </body>
 </html>
