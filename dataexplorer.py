@@ -243,7 +243,7 @@ def create_plots(self):
 
     plot_set = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
                           'lasso_select', 'box_select', 'save', 'help'],
-                'active_scroll': 'wheel_zoom',
+                # 'active_scroll': 'wheel_zoom',
                 'plot_height': self.p_h, 'plot_width': self.p_w,
                 'lod_factor': 1000,  # level-of-detail decimation
                 # 'output_backend': 'webgl',
@@ -353,7 +353,7 @@ def create_plots(self):
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
     # Create the final grid of figures
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
-                    toolbar_options={'logo': None}
+                    toolbar_options={'logo': None},
                     #    sizing_mode='scale_height',
                     #    sizing_mode='scale_both',
                     #    sizing_mode='stretch_both',
