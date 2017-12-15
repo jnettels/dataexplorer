@@ -311,8 +311,7 @@ def create_plots(self):
         hover = HoverTool(point_policy='follow_mouse',  # 'snap_to_data',
                           tooltips=tips_list,
                           renderers=[cr],  # Uses 'hover_*' options
-                          formatters=formatters_dict
-                          )
+                          formatters=formatters_dict)
         p.add_tools(hover)
 
         # Add horizontal and vertical lines in the center coordinates
@@ -327,13 +326,13 @@ def create_plots(self):
     The plots are completed, now we add a figure for the legend. Here we remove
     everything but the legend itself. This figure is last in the grid.
     '''
-    legend_top = figure(plot_height=50, plot_width=1850, toolbar_location=None)
-    legend_bot = figure(plot_height=2*self.p_h, plot_width=2*self.p_w,
-                        toolbar_location=None)
+    legend_top = figure(plot_height=50, plot_width=1850)
+    legend_bot = figure(plot_height=2*self.p_h, plot_width=2*self.p_w)
 
     for legend_x in [legend_top, legend_bot]:
         legend_x.circle(x=self.vals[0], y=self.vals[1], source=self.source,
                         **glyph_set, legend='Legend', visible=False)
+        legend_x.toolbar_location = None
         legend_x.legend.location = 'top_left'
         legend_x.legend.margin = 0
         legend_x.axis.visible = False
@@ -380,9 +379,9 @@ def create_widgets_1(self):
         3. Button: Used to load a new file and then rebuild the whole layout
 
     Args:
-        Basically everything...
+        self (Dataexplorer) : The object containing all the session information
 
-    Return:
+    Returns:
         wb_list_1 (List) : A list of widgetboxes, each containing widgets.
 
     '''
