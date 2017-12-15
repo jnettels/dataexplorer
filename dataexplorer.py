@@ -667,18 +667,25 @@ def update_filters(active, caller, DatEx):
 
 
 def update_CDS(DatEx):
-    '''Update the ColumnDataSource object
+    '''Update the ColumnDataSource object from the Pandas DataFrame while
+    applying the 'filter_combined'.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
     '''
     # The order of df may have changed due to sorting by the colour_cat.
     # Thus the order of filter_combined and the df have to be matched
     filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
-    # Create a new ColumnDataSource object from the filtered DataFrame
-    source_new = ColumnDataSource(data=DatEx.df[filter_combined_ri])
 
-    # Update the "data" property of the "source" object with the new data.
-    # Once the "source" changes, the figures and glyphs update automagically,
-    # thanks to Bokeh's magic.
-    DatEx.source.data = source_new.data
+    # Update the 'data' property of the 'source' object with the new data.
+    # The new data is formatted with Pandas as a dict of the 'list' type.
+    DatEx.source.data = DatEx.df[filter_combined_ri].to_dict('list')
+    # Bokeh detects changes to the 'source' automatically and updates the
+    # figures, glyphs and DataTable accordingly.
+    # After this step the script is idle until the next user input occurs.
 
 
 def update_colour_cat(attr, old, new, DatEx):
