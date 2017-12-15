@@ -327,7 +327,7 @@ def create_plots(self):
     The plots are completed, now we add a figure for the legend. Here we remove
     everything but the legend itself. This figure is last in the grid.
     '''
-    legend_top = figure(plot_height=50, plot_width=1700, toolbar_location=None)
+    legend_top = figure(plot_height=50, plot_width=1850, toolbar_location=None)
     legend_bot = figure(plot_height=2*self.p_h, plot_width=2*self.p_w,
                         toolbar_location=None)
 
@@ -353,16 +353,20 @@ def create_plots(self):
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
     # Create the final grid of figures
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
-                    toolbar_options={'logo': None},
-                    #    sizing_mode='scale_height',
-                    #    sizing_mode='scale_both',
-                    #    sizing_mode='stretch_both',
-                    )
-    # This creates a DIV element with the CSS class 'scrollable'. Together with
-    # index.html this allows the gridplot to become a scrollable box.
-    grid = column(grid, sizing_mode='fixed', height=3*self.p_h,
-                  width=(n_grid_cols+1)*self.p_w,
-                  css_classes=['scrollable'])
+                    toolbar_options={'logo': None})
+
+    ''' Make the plots scrollable'''
+    # The children of 'grid' are the ToolbarBox [0] and a column containing
+    # all the rows of plots [1].
+    # We assign this column the CSS class 'scrollable'. Together with the style
+    # added to index.html, this allows the gridplot to become a scrollable box.
+    grid.children[1].css_classes = ['scrollable']
+    # We also need to fix the boundaries of this html DIV. The scrollbar
+    # appears when the contents are too large (overflow occurs).
+    grid.children[1].sizing_mode = 'fixed'
+    grid.children[1].height = 3*self.p_h
+    grid.children[1].width = (n_grid_cols+1)*self.p_w
+
     self.grid = grid
     self.legend_top = legend_top
     return self.grid
