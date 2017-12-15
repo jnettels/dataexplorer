@@ -80,6 +80,8 @@ class Dataexplorer(object):
         self.combinator = combinator
         self.combinator_new = combinator
         self.c_size = 5
+        self.p_h = 250  # global setting for plot_height
+        self.p_w = 250  # global setting for plot_width
 
         # Set categories, their labels and value column names
         try:
@@ -242,7 +244,7 @@ def create_plots(self):
     plot_set = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
                           'lasso_select', 'box_select', 'save', 'help'],
                 'active_scroll': 'wheel_zoom',
-                'plot_height': 250, 'plot_width': 250,
+                'plot_height': self.p_h, 'plot_width': self.p_w,
                 'lod_factor': 1000,  # level-of-detail decimation
                 # 'output_backend': 'webgl',
                 }
@@ -325,8 +327,9 @@ def create_plots(self):
     The plots are completed, now we add a figure for the legend. Here we remove
     everything but the legend itself. This figure is last in the grid.
     '''
-    legend_top = figure(plot_height=50, plot_width=2000, toolbar_location=None)
-    legend_bot = figure(plot_height=500, plot_width=500, toolbar_location=None)
+    legend_top = figure(plot_height=50, plot_width=1700, toolbar_location=None)
+    legend_bot = figure(plot_height=2*self.p_h, plot_width=2*self.p_w,
+                        toolbar_location=None)
 
     for legend_x in [legend_top, legend_bot]:
         legend_x.circle(x=self.vals[0], y=self.vals[1], source=self.source,
@@ -357,7 +360,8 @@ def create_plots(self):
                     )
     # This creates a DIV element with the CSS class 'scrollable'. Together with
     # index.html this allows the gridplot to become a scrollable box.
-    grid = column(grid, sizing_mode='fixed', height=750, width=1850,
+    grid = column(grid, sizing_mode='fixed', height=3*self.p_h,
+                  width=(n_grid_cols+1)*self.p_w,
                   css_classes=['scrollable'])
     self.grid = grid
     self.legend_top = legend_top
