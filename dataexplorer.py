@@ -79,6 +79,8 @@ class Dataexplorer(object):
         self.data_name = data_name
         self.combinator = combinator
         self.combinator_new = combinator
+        self.grid_needs_update = False
+        self.table_needs_update = False
         self.c_size = 5
         self.p_h = 250  # global setting for plot_height
         self.p_w = 250  # global setting for plot_width
@@ -204,10 +206,7 @@ def analyse_dataframe(self):
     self.vals = vals
     self.cats = cats
     self.cats_labels = cats_labels
-    self.vals_active = vals_active  # vals_active for gridplot
-    self.vals_active_dt = vals_active  # vals_active for datatable
-    self.vals_active_new = vals_active
-    self.vals_active_dt_new = vals_active
+    self.vals_active = vals_active  # active value columns
 
     # The first category label is the default colour category
     self.colour_cat = cats[0]
@@ -537,7 +536,7 @@ def create_data_table(self):
 def create_data_table_columns(self):
     self.dt_columns = []
 
-    for name in self.cats + self.vals_active_dt:
+    for name in self.cats + self.vals_active:
         if self.df[name].dtype == 'datetime64[ns]':
             dt_column = TableColumn(field=name, title=name,
                                     formatter=DateFormatter())
@@ -747,8 +746,9 @@ def update_vals_active(attr, old, new, DatEx):
     elif len(vals_active) < 2:
         return
     else:
-        DatEx.vals_active_new = vals_active
-        DatEx.vals_active_dt_new = vals_active
+        DatEx.vals_active = vals_active
+        DatEx.grid_needs_update = True
+        DatEx.table_needs_update = True
 
 
 def update_coords(active, DatEx):
@@ -787,7 +787,8 @@ def update_combinator(attr, old, new, DatEx):
         None
 
     '''
-    DatEx.combinator_new = new
+    DatEx.combinator = new
+    DatEx.grid_needs_update = True
 
 
 def callback_tabs(attr, old, new, DatEx):
@@ -804,16 +805,14 @@ def callback_tabs(attr, old, new, DatEx):
 
     '''
     if new == 0:  # First tab
-        if (DatEx.combinator != DatEx.combinator_new) or \
-           (DatEx.vals_active != DatEx.vals_active_new):
-            DatEx.vals_active = DatEx.vals_active_new
-            DatEx.combinator = DatEx.combinator_new
+        if DatEx.grid_needs_update:
             update_gridplot(DatEx)
+            DatEx.grid_needs_update = False
 
     elif new == 1:  # Second tab
-        if (DatEx.vals_active_dt != DatEx.vals_active_dt_new):
-            DatEx.vals_active_dt = DatEx.vals_active_dt_new
+        if (DatEx.table_needs_update):
             update_table(DatEx)
+            DatEx.table_needs_update = False
 
 
 def update_gridplot(DatEx):
