@@ -13,8 +13,13 @@ import logging
 import base64
 import numpy as np
 import pandas as pd
-from bokeh.models import ColumnDataSource, CustomJS
+from bokeh.models import ColumnDataSource, CustomJS, HoverTool
+from bokeh.models import LinearColorMapper, BasicTicker, ColorBar
 from bokeh.models.widgets import Button
+from bokeh import palettes
+from math import pi
+
+from bokeh.plotting import figure
 
 
 def create_test_data():
@@ -149,3 +154,67 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
     button.callback = CustomJS(args=dict(source=source), code=code_upload)
 
     return button
+
+
+def create_heatmap(corr_matrix):
+    '''
+    Create and return a heatmap plot for a given correlation matrix.
+
+    Args:
+        corr_matrx (DataFrame) : A Pandas DataFrame produced by df.corr()
+
+    Returns:
+        p (figure) : A Bokeh figure containing the rectangle plot
+    '''
+
+    # Reformat the correlation matrix with melt() and use it as a Bokeh source
+    corr_matrix.index.names = ['x']
+    corr_df = corr_matrix.reset_index().melt(id_vars='x', var_name='y',
+                                             value_name='value')
+    source = ColumnDataSource(corr_df)
+
+    # Construct a colourmap by combining two existing palettes
+    colours = palettes.viridis(20)[9:19]
+    colours2 = palettes.plasma(20)[9:19]
+    colours.extend(reversed(colours2))
+    mapper = LinearColorMapper(palette=colours, low=-1, high=1)
+
+    # Create the figure
+    p = figure(title='Correlation coefficient matrix',
+               x_range=list(corr_matrix.columns),
+               y_range=list(reversed(corr_matrix.columns)),
+               x_axis_location='above', plot_width=800, plot_height=800,
+               tools='save, pan, box_zoom, reset, wheel_zoom',
+               toolbar_location='below', logo=None)
+
+    p.grid.grid_line_color = None
+    p.axis.axis_line_color = None
+    p.axis.major_tick_line_color = None
+    p.axis.major_label_text_font_size = "7pt"
+    p.axis.major_label_standoff = 0
+    p.xaxis.major_label_orientation = pi / 3
+
+    # Add the rectangle glyphs
+    p.rect(x="x", y="y", width=1, height=1,
+           source=source,
+           fill_color={'field': 'value', 'transform': mapper},
+           line_color=None)
+
+    # Add the colour bar
+    colour_bar = ColorBar(color_mapper=mapper,
+                          major_label_text_font_size="7pt",
+                          ticker=BasicTicker(desired_num_ticks=len(colours)),
+                          # formatter=PrintfTickFormatter(format="%d%%"),
+                          label_standoff=6, border_line_color=None,
+                          location=(0, 0))
+    p.add_layout(colour_bar, 'right')
+
+    # Add the hover tool
+    hover = HoverTool(point_policy='snap_to_data',
+                      tooltips=[('x', '@x'),
+                                ('y', '@y'),
+                                ('corr', '@value')]
+                      )
+    p.add_tools(hover)
+
+    return p

@@ -62,7 +62,7 @@ from pandas.api.types import is_categorical_dtype
 from bokeh.io import export_png, export_svgs
 
 # My own library of functions from the file helpers.py
-from helpers import new_upload_button, create_test_data
+from helpers import new_upload_button, create_test_data, create_heatmap
 
 # Global Pandas option for displaying terminal output
 pd.set_option('display.expand_frame_repr', False)
@@ -81,6 +81,7 @@ class Dataexplorer(object):
         self.combinator_new = combinator
         self.grid_needs_update = False
         self.table_needs_update = False
+        self.corr_matrix_needs_update = False
         self.c_size = 5
         self.p_h = 250  # global setting for plot_height
         self.p_w = 250  # global setting for plot_width
@@ -106,6 +107,9 @@ class Dataexplorer(object):
 
         # Create and get the DataTable for tab 3
         create_data_table(self)
+
+        # Create a correlation coefficient matrix plot
+        create_corr_matrix(self)
 
         # Create a Bokeh "layout" from the widgets and grid of figures
         create_layout(self)
@@ -559,6 +563,23 @@ def create_data_table_columns(self):
     return self.dt_columns
 
 
+def create_corr_matrix(self):
+    '''
+    Create a matrix plot containing the correlation coefficients of the
+    active value columns. The applied filters are taken into account.
+
+    Args:
+        self
+    Returns:
+        None
+    '''
+    corr_matrix = self.df[self.filter_combined_ri][self.vals_active].corr(
+            method='pearson')
+
+    self.corr_matrix = create_heatmap(corr_matrix)
+    return self.corr_matrix
+
+
 def create_layout(self):
     '''Create a Bokeh "layouts" from the widgetboxes and grid of figures.
     The layouts are organized into tabs and those are added as "root" to the
@@ -580,12 +601,14 @@ def create_layout(self):
     '''
     layout_1 = layout([self.wb_list_1, self.legend_top, self.grid])
     layout_2 = layout(self.data_table)
-    layout_3 = layout(self.wb_list_2)
+    layout_3 = layout(self.corr_matrix)
+    layout_4 = layout(self.wb_list_2)
 
     tab_1 = Panel(child=layout_1, title='Scatters')
     tab_2 = Panel(child=layout_2, title='Data Table')
-    tab_3 = Panel(child=layout_3, title='Settings')
-    tabs = Tabs(tabs=[tab_1, tab_2, tab_3])
+    tab_3 = Panel(child=layout_3, title='Correlation')
+    tab_4 = Panel(child=layout_4, title='Settings')
+    tabs = Tabs(tabs=[tab_1, tab_2, tab_3, tab_4])
     tabs.on_change('active', partial(callback_tabs, DatEx=self))
 
     curdoc().clear()  # Clear any previous document roots
@@ -626,6 +649,7 @@ def prepare_filter(self):
     self.filter_list = filter_list
     self.filter_true = filter_true
     self.filter_combined = filter_true
+    self.filter_combined_ri = filter_true  # Reindexed filter_combined
     return
 
 
@@ -683,6 +707,9 @@ def update_filters(active, caller, DatEx):
 #                    ]
 #    view.filters = [BooleanFilter(filter_combined)]
 
+    # The correlation matrix now needs an update
+    DatEx.corr_matrix_needs_update = True
+
 
 def update_CDS(DatEx):
     '''Update the ColumnDataSource object from the Pandas DataFrame while
@@ -696,11 +723,11 @@ def update_CDS(DatEx):
     '''
     # The order of df may have changed due to sorting by the colour_cat.
     # Thus the order of filter_combined and the df have to be matched
-    filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
+    DatEx.filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
 
     # Update the 'data' property of the 'source' object with the new data.
     # The new data is formatted with Pandas as a dict of the 'list' type.
-    DatEx.source.data = DatEx.df[filter_combined_ri].to_dict('list')
+    DatEx.source.data = DatEx.df[DatEx.filter_combined_ri].to_dict('list')
     # Bokeh detects changes to the 'source' automatically and updates the
     # figures, glyphs and DataTable accordingly.
     # After this step the script is idle until the next user input occurs.
@@ -761,6 +788,7 @@ def update_vals_active(attr, old, new, DatEx):
         DatEx.vals_active = vals_active
         DatEx.grid_needs_update = True
         DatEx.table_needs_update = True
+        DatEx.corr_matrix_needs_update = True
 
 
 def update_coords(active, DatEx):
@@ -836,6 +864,11 @@ def callback_tabs(attr, old, new, DatEx):
             update_table(DatEx)
             DatEx.table_needs_update = False
 
+    elif new == 2:  # Third tab
+        if (DatEx.corr_matrix_needs_update):
+            update_corr_matrix(DatEx)
+            DatEx.corr_matrix_needs_update = False
+
 
 def update_gridplot(DatEx):
     # Create a new grid:
@@ -854,6 +887,13 @@ def update_gridplot(DatEx):
 def update_table(DatEx):
     create_data_table_columns(DatEx)
     DatEx.data_table.columns = DatEx.dt_columns
+
+
+def update_corr_matrix(DatEx):
+    layout_3 = curdoc().roots[0].tabs[2].child
+    # The children of a layout can be treated like a list:
+    layout_3.children.remove(DatEx.corr_matrix)
+    layout_3.children.append(create_corr_matrix(DatEx))
 
 
 def get_colourmap(categories):
