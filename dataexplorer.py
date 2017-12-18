@@ -479,6 +479,16 @@ def create_widgets_2(self):
                        title='Set the size of the scatter points')
     sl_c_size.on_change('value', partial(update_c_size, DatEx=self))
 
+    sl_p_h = Slider(start=100, end=1000, step=10,
+                    value=self.p_h,
+                    title='Set the plot height in pixels')
+    sl_p_h.on_change('value', partial(update_p_h, DatEx=self))
+
+    sl_p_w = Slider(start=100, end=1000, step=10,
+                    value=self.p_w,
+                    title='Set the plot width in pixels')
+    sl_p_w.on_change('value', partial(update_p_w, DatEx=self))
+
     sl_vals_max = Slider(start=2, end=len(self.vals), step=1,
                          value=min(self.vals_max, len(self.vals)),
                          title='Set the maximum number of value columns')
@@ -501,8 +511,10 @@ def create_widgets_2(self):
     cg_col = column(cg, sizing_mode='fixed', height=500, width=950,
                     css_classes=['scrollable'])
 
-    wb = [widgetbox(but_load_new, div1, tgl_coords, div2, sl_c_size, sl_comb,
-                    sl_vals_max, div3),
+    wb = [but_load_new, div1, tgl_coords, div2,
+          [sl_c_size, sl_p_h, sl_p_w],
+          [sl_vals_max, sl_comb],
+          div3,
           cg_col,
           widgetbox(div4, self.ti_alert)]
     self.wb_list_2 = wb
@@ -760,6 +772,16 @@ def update_c_size(attr, old, new, DatEx):
     DatEx.c_size = new
     for glpyh_renderer in DatEx.glyph_list:
         glpyh_renderer.glyph.size = DatEx.c_size
+
+
+def update_p_h(attr, old, new, DatEx):
+    DatEx.p_h = new
+    DatEx.grid_needs_update = True
+
+
+def update_p_w(attr, old, new, DatEx):
+    DatEx.p_w = new
+    DatEx.grid_needs_update = True
 
 
 def update_vals_max(attr, old, new, DatEx):
