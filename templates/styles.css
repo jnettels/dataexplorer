@@ -1,0 +1,11 @@
+/* These Cascading Style Sheets are included in the index.html */
+
+/* Make div with the CSS class 'scrollable' scrollable by adding overflow */
+div.scrollable {
+    overflow: auto;
+}
+
+/* Make the hover tool display only the top tooltip (not a cluttered list) */
+.bk-tooltip>div:not(:first-child) {
+    display:none;
+}
