@@ -407,8 +407,8 @@ def create_widgets_1(self):
         # the "partial" function to transport that information
         cbg.on_click(partial(update_filters, caller=i, DatEx=self))
 
-    sel = Select(title='Category label for colours:', value=self.colour_cat,
-                 options=self.cats)
+    sel = Select(title='Classification used for legend:',
+                 value=self.colour_cat, options=self.cats)
     sel.on_change('value', partial(update_colour_cat, DatEx=self))
 
     # Prepare the layout of the widgets:

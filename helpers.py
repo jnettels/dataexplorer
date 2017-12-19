@@ -42,43 +42,43 @@ def create_test_data():
               'T2': np.random.randint(0, 30, time_steps),
               'Sin': np.sin(np.linspace(-np.pi, np.pi, time_steps)),
               'Cos': np.cos(np.linspace(-np.pi, np.pi, time_steps)),
-              'Category Label 1': pd.Categorical(['A']*time_steps),
-              'Category Label 2': pd.Categorical(['First']*time_steps),
-              'Category Label 3': pd.Categorical(['10-20']*time_steps),
+              'Classification 1': pd.Categorical(['Class A']*time_steps),
+              'Classification 2': pd.Categorical(['Class First']*time_steps),
+              'Classification 3': pd.Categorical(['Class 10-20']*time_steps),
               }
     dataA2 = {'T1': np.random.randint(10, 30, time_steps),
               'T2': np.random.randint(10, 40, time_steps),
-              'Category Label 1': pd.Categorical(['A']*time_steps),
-              'Category Label 2': pd.Categorical(['Second']*time_steps),
-              'Category Label 3': pd.Categorical(['10-20']*time_steps),
+              'Classification 1': pd.Categorical(['Class A']*time_steps),
+              'Classification 2': pd.Categorical(['Class Second']*time_steps),
+              'Classification 3': pd.Categorical(['Class 10-20']*time_steps),
               }
     dataB1 = {'T1': np.random.randint(20, 40, time_steps),
               'T2': np.random.randint(20, 50, time_steps),
               'Sin': np.sin(np.linspace(-3*np.pi, 3*np.pi, time_steps))*0.5,
-              'Category Label 1': pd.Categorical(['B']*time_steps),
-              'Category Label 2': pd.Categorical(['First']*time_steps),
-              'Category Label 3': pd.Categorical(['10-20']*time_steps),
+              'Classification 1': pd.Categorical(['Class B']*time_steps),
+              'Classification 2': pd.Categorical(['Class First']*time_steps),
+              'Classification 3': pd.Categorical(['Class 10-20']*time_steps),
               }
     dataB2 = {'T1': np.random.randint(30, 50, time_steps),
               'T2': np.random.randint(30, 60, time_steps),
-              'Category Label 1': pd.Categorical(['B']*time_steps),
-              'Category Label 2': pd.Categorical(['Third']*time_steps),
-              'Category Label 3': pd.Categorical(['20-30']*time_steps),
+              'Classification 1': pd.Categorical(['Class B']*time_steps),
+              'Classification 2': pd.Categorical(['Class Third']*time_steps),
+              'Classification 3': pd.Categorical(['Class 20-30']*time_steps),
               }
     dataC1 = {'T1': np.random.randint(40, 60, time_steps),
               'T2': np.random.randint(40, 70, time_steps),
               'Cos': np.cos(np.linspace(-2*np.pi, 1*np.pi, time_steps))*0.66,
               'Sin': np.sin(np.linspace(-3*np.pi, 3*np.pi, time_steps))*0.75,
-              'Category Label 1': pd.Categorical(['C']*time_steps),
-              'Category Label 2': pd.Categorical(['Second']*time_steps),
-              'Category Label 3': pd.Categorical(['20-30']*time_steps),
+              'Classification 1': pd.Categorical(['Class C']*time_steps),
+              'Classification 2': pd.Categorical(['Class Second']*time_steps),
+              'Classification 3': pd.Categorical(['Class 20-30']*time_steps),
               }
     dataC2 = {'T1': np.random.randint(50, 70, time_steps),
               'T2': np.random.randint(50, 80, time_steps),
               'Cos': np.cos(np.linspace(-3*np.pi, 3*np.pi, time_steps))*0.33,
-              'Category Label 1': pd.Categorical(['C']*time_steps),
-              'Category Label 2': pd.Categorical(['Third']*time_steps),
-              'Category Label 3': pd.Categorical(['20-30']*time_steps),
+              'Classification 1': pd.Categorical(['Class C']*time_steps),
+              'Classification 2': pd.Categorical(['Class Third']*time_steps),
+              'Classification 3': pd.Categorical(['Class 20-30']*time_steps),
               }
 
     df = pd.concat([
@@ -95,11 +95,12 @@ def create_test_data():
 
     # With categories applied, e.g. sorting them could be enabled
     # Requires Pandas >= 0.21
-#    c1 = CategoricalDtype(['A', 'B', 'C'], ordered=True)
-#    c2 = CategoricalDtype(['First', 'Second', 'Third'], ordered=True)
-#    df['Category Label 1'] = df['Category Label 1'].astype(c1)
-#    df['Category Label 2'] = df['Category Label 2'].astype(c2)
-#    print(df.sort_values(by=['Category Label 2', 'Category Label 1']))
+#    c1 = CategoricalDtype(['Class A', 'Class B', 'Class C'], ordered=True)
+#    c2 = CategoricalDtype(['Class First', 'Class Second', 'Class Third'],
+#                          ordered=True)
+#    df['Classification 1'] = df['Classification 1'].astype(c1)
+#    df['Classification 2'] = df['Classification 2'].astype(c2)
+#    print(df.sort_values(by=['Classification 2', 'Classification 1']))
 
 #    df.to_excel('excel_text.xlsx')  # Save this as an Excel file if you want
 #    print(df)  # Show the final DataFrame in the terminal window
