@@ -35,6 +35,7 @@ is required for the batch file to work.
 
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
+TODO: Find a way to display messages without ti_alert
 
 '''
 
@@ -49,6 +50,7 @@ from bokeh.layouts import column
 from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput, Slider, Toggle
+from bokeh.models.widgets import RadioGroup
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
 from bokeh.models import CustomJS, HoverTool, Span
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
@@ -86,6 +88,7 @@ class Dataexplorer(object):
         self.c_size = 5
         self.p_h = 250  # global setting for plot_height
         self.p_w = 250  # global setting for plot_width
+        self.load_mode_append = 0  # 0 equals False equals replace
 
         # Set categories, their labels and value column names
         try:
@@ -187,14 +190,15 @@ def analyse_dataframe(self):
 
     if cats == []:
         # This is not an ideal usecase, but still possible
-        self.show_info('No classification columns found in the file! Please ' +
+        self.show_info('Warning: No classification columns found in the file' +
+                       ', using the filename as a class instead! Please ' +
                        'refer to example Excel file for instructions.')
-        df['Import'] = ['Import 1']*len(df)  # Fall back to a default column
-        cats = ['Import']
+        df['File'] = [self.data_name]*len(df)  # Fall back to a default
+        cats = ['File']
     if vals == []:
         # This cannot be accepted
-        raise LookupError('No value columns found in the file! Please ' +
-                          'refer to example Excel file for instructions.')
+        raise LookupError('Error: No value columns found in the file! Please' +
+                          ' refer to example Excel file for instructions.')
 
     cats_labels = dict()
     for cat in cats:
@@ -256,6 +260,7 @@ def create_plots(self):
                 'plot_height': self.p_h, 'plot_width': self.p_w,
                 'lod_factor': 1000,  # level-of-detail decimation
                 # 'output_backend': 'webgl',
+                # 'output_backend': 'svg',  # For export with SaveTool (Slow!)
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
                  'fill_alpha': 0.2, 'hover_alpha': 1,
@@ -467,8 +472,7 @@ def create_widgets_2(self):
 #    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
 
     # Second implementation
-    div1 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
-    div2 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
+    div2 = Div(text='''<div> </div>''', height=8, width=600)  # Empty text
     div3 = Div(text='''<div style="position:relative; top:15px">
                Select the value columns used in the plots:
                </div>''', height=25, width=600)
@@ -479,6 +483,11 @@ def create_widgets_2(self):
         os.makedirs(save_path)
     but_load_new = new_upload_button(save_path, load_file, self,
                                      label='Upload a new file to the server')
+
+    rg_load = RadioGroup(labels=['Replace current data with new file',
+                                 'Append new file to current data'],
+                         active=self.load_mode_append)
+    rg_load.on_click(partial(update_load_mode, DatEx=self))
 
     tgl_coords = Toggle(label='Toggle coordinate center lines',
                         active=True)
@@ -521,8 +530,9 @@ def create_widgets_2(self):
     cg_col = column(cg, sizing_mode='fixed', height=500, width=950,
                     css_classes=['scrollable'])
 
-    wb = [but_load_new, div1, tgl_coords, div2,
-          [sl_c_size, sl_p_h, sl_p_w],
+    wb = [[but_load_new, rg_load],
+          div2,
+          [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
           [sl_vals_max, sl_comb],
           div3,
           cg_col,
@@ -802,6 +812,10 @@ def update_coords(active, DatEx):
         span.visible = active
 
 
+def update_load_mode(active, DatEx):
+    DatEx.load_mode_append = active
+
+
 def update_c_size(attr, old, new, DatEx):
     DatEx.c_size = new
     for glpyh_renderer in DatEx.glyph_list:
@@ -976,16 +990,18 @@ def load_file_dialog():
 
 
 def load_file(filepath, DatEx):
-    '''The chosen file is read into a Pandas DataFrame.
+    '''The chosen file is read into a Pandas DataFrame and the UI is recreated.
     Supported file types are '.xlsx' and '.xls'. Pandas will also try to read
     in '.csv' files, but can easily fail if the separators are not guessed
-    correctly.
-    In order to regenerate all widgets and figures, create_dataexplorer_UI()
-    is called. This finishes with calling create_layout(), which "cleares"
-    the current Bokeh dokument and adds a new root to the empty document.
+    correctly. Support for special formats of .csv files can be implemented
+    in read_csv_formats().
+    In order to regenerate all widgets and figures, Dataexplorer() is called to
+    create a new object. The initialization of that object finishes with
+    calling create_layout(), which "cleares" the current Bokeh document and
+    adds a new root to the empty document.
 
     Args:
-        filepath (str) : Path to file to load.
+        filepath (str) : The path to the file to load.
 
     Return:
         None
@@ -999,10 +1015,10 @@ def load_file(filepath, DatEx):
         filetype = os.path.splitext(os.path.basename(filepath))[1]
         if filetype in ['.xlsx', '.xls']:
             # Excel can be read automatically
-            df = pd.read_excel(filepath)  # Pandas function
+            df_new = pd.read_excel(filepath)  # Pandas function
         elif filetype in ['.csv']:
             # csv files can have different formats
-            df = read_csv_formats(filepath)  # My own wrapper around Pandas
+            df_new = read_csv_formats(filepath)  # My own wrapper around Pandas
         else:
             raise NotImplementedError('Unsupported file extension: '+filetype)
     except Exception as ex:
@@ -1012,9 +1028,35 @@ def load_file(filepath, DatEx):
 
     logging.debug('Loaded ' + filepath)
 
-    data_name = os.path.basename(filepath)
+    '''Now that the new data is loaded we need to replace the old data or
+    append to it'''
+    if not DatEx.load_mode_append:  # Means: Load mode = replace
+        data_name = os.path.basename(filepath)
+        df = df_new
+    else:  # Means: Load mode = append
+        # Appended DataFrames get their names as a classification 'File'
+        data_name_new = os.path.basename(filepath)
+        data_name = DatEx.data_name+', '+data_name_new
+        df_new['File'] = [data_name_new]*len(df_new)
+        df_old = DatEx.df.drop(columns=['Colours', 'Legend'])
+        if 'File' not in df_old.columns:  # Only do this if necessary
+            df_old['File'] = [DatEx.data_name]*len(df_old)
+
+        # Append (with concatenate) the old and new df, with a new index
+        df = pd.concat([df_old, df_new], ignore_index=True)
+        try:
+            # If there is a column named 'Time', move it to the first position
+            df = df.set_index('Time').reset_index()
+        except Exception as ex:
+            logging.debug(ex)
+            pass
+
+    # Save some settings:
     combinator_last = DatEx.combinator
+
+    '''Start the recreation of the UI by creating a new Dataexplorer object'''
     DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
+    # (The script is basically restarted at this point)
 
 
 def export_figs(DatEx, fig_sel=None, ftype='.png'):
