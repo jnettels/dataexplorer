@@ -219,3 +219,59 @@ def create_heatmap(corr_matrix):
     p.add_tools(hover)
 
     return p
+
+
+def read_csv_formats(filepath):
+    ''' Read a csv file and return a Pandas DataFrame. This is a wrapper
+    around Pandas' read_csv() where the format of the csv file is determined
+    first. The possible formats are:
+        - 'synavision CSV format 2.0 DE': As exported by the Digital Testbench
+        - Standard: Here we try to guess the format rules. Files that follow
+            the Excel rules should work.
+    Args:
+        filepath (string) : The path to the file
+
+    Returns:
+        df (DataFrame) : A Pandas Dataframe
+
+    '''
+    with open(filepath, 'r') as f:
+        first_line = f.readline()  # We need the first line to get the format
+
+    if 'synavision CSV format 2.0 DE' in first_line:
+        # The Digital Testbench produces a special header that we deal with
+        df = pd.read_csv(filepath,
+                         sep=';', engine='python',
+                         decimal=',', thousands='.',
+                         header=[1, 6],  # Row 1: Names; Row 6: Units
+                         parse_dates=[0],  # Parse first column as date
+                         infer_datetime_format=True,
+                         dayfirst=True,  # DD.MM.YYYY
+                         )
+
+        # We created a multi-index that has the units on its second level
+        units = df.columns.get_level_values(1).values
+        for i, unit in enumerate(units):
+            if 'Unnamed' in unit or 'unit' in unit:
+                units[i] = '-'  # Replace empty units with '-'
+        # Drop the level with the units
+        df.columns = df.columns.droplevel(1)
+
+        # Create a dict with the old_index and new_index, where column names
+        # and units are combined with the pattern: 'Name [Unit]'
+        old_index = df.columns.values
+        new_index = [x+' ['+y+']' for x, y in zip(old_index, units)]
+        cols_dict = dict(zip(old_index, new_index))
+
+        # Rename the columns with the dict, then rename the time column again
+        df.rename(columns=cols_dict, inplace=True)
+        df.rename(columns={'id [-]': 'Time'}, inplace=True)
+
+    else:
+        # Standard format: Here we guess everything. May or may not work
+        df = pd.read_csv(filepath,
+                         sep=None, engine='python',  # Guess separator
+                         parse_dates=[0],  # Try to parse first column as date
+                         infer_datetime_format=True)
+
+    return df

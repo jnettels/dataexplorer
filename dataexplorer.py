@@ -62,7 +62,8 @@ from pandas.api.types import is_categorical_dtype
 from bokeh.io import export_png, export_svgs
 
 # My own library of functions from the file helpers.py
-from helpers import new_upload_button, create_test_data, create_heatmap
+from helpers import (new_upload_button, create_test_data, create_heatmap,
+                     read_csv_formats)
 
 # Global Pandas option for displaying terminal output
 pd.set_option('display.expand_frame_repr', False)
@@ -126,7 +127,8 @@ class Dataexplorer(object):
         try:  # The ti_alert widget may not have been created yet
             timestamp = pd.datetime.now().time().strftime('%H:%M')
             self.ti_alert.value = timestamp + ' ' + message
-        except Exception:
+        except Exception as ex:
+            logging.critical(ex)
             pass
         logging.critical(message)  # Bokeh's server logging funtion
 
@@ -184,9 +186,13 @@ def analyse_dataframe(self):
             vals.append(column_)
 
     if cats == []:
-        raise LookupError('No category columns found in the file! Please ' +
-                          'refer to example Excel file for instructions.')
-    elif vals == []:
+        # This is not an ideal usecase, but still possible
+        self.show_info('No classification columns found in the file! Please ' +
+                       'refer to example Excel file for instructions.')
+        df['Import'] = ['Import 1']*len(df)  # Fall back to a default column
+        cats = ['Import']
+    if vals == []:
+        # This cannot be accepted
         raise LookupError('No value columns found in the file! Please ' +
                           'refer to example Excel file for instructions.')
 
@@ -992,12 +998,11 @@ def load_file(filepath, DatEx):
     try:
         filetype = os.path.splitext(os.path.basename(filepath))[1]
         if filetype in ['.xlsx', '.xls']:
-            df = pd.read_excel(filepath)
+            # Excel can be read automatically
+            df = pd.read_excel(filepath)  # Pandas function
         elif filetype in ['.csv']:
-            df = pd.read_csv(filepath,
-                             sep=None, engine='python',  # Guess separator
-                             parse_dates=[0],  # Try to parse first col as date
-                             infer_datetime_format=True)
+            # csv files can have different formats
+            df = read_csv_formats(filepath)  # My own wrapper around Pandas
         else:
             raise NotImplementedError('Unsupported file extension: '+filetype)
     except Exception as ex:
