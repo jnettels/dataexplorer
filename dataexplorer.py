@@ -813,17 +813,18 @@ def update_colours(DatEx):
 
 def update_vals_active(attr, old, new, DatEx):
 
-    # Translate the active button positions into chosen category strings:
-    vals_active = [DatEx.vals[j] for j in new]
-
-    if len(vals_active) > DatEx.vals_max:
+    if len(new) > DatEx.vals_max:
         message = 'Maximum of '+str(DatEx.vals_max)+' value columns exceeded.'
         DatEx.show_info(message)
+        if not len(old) > DatEx.vals_max:  # Prevent infinite loop
+            DatEx.cg_vals.active = old  # Reset selection to old state
         return
-    elif len(vals_active) < 2:
+    elif len(new) < 2:
         return
     else:
-        DatEx.vals_active = vals_active
+        # Translate the active button positions into chosen category strings:
+        DatEx.vals_active = [DatEx.vals[j] for j in new]
+        # Set the required update flags:
         DatEx.grid_needs_update = True
         DatEx.table_needs_update = True
         DatEx.corr_matrix_needs_update = True
