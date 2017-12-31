@@ -44,6 +44,7 @@ import numpy as np
 import itertools
 import os
 import logging
+import bokeh
 from bokeh.layouts import widgetbox, gridplot, layout
 from bokeh.layouts import row
 from bokeh.layouts import column
@@ -62,6 +63,7 @@ from tkinter import Tk, filedialog  # , messagebox
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
 from bokeh.io import export_png, export_svgs
+from distutils.version import StrictVersion
 
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
@@ -70,6 +72,15 @@ from helpers import (new_upload_button, create_test_data, create_heatmap,
 # Global Pandas option for displaying terminal output
 pd.set_option('display.expand_frame_repr', False)
 
+# Check some version requirements
+pd_v_required = '0.21.0'
+if StrictVersion(pd.__version__) < StrictVersion(pd_v_required):
+    logging.critical('Warning: Pandas version '+pd_v_required+' is required. ' +
+                    'Your version is '+pd.__version__)
+bk_v_required = '0.12.13'
+if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
+    logging.critical('Warning: Bokeh version '+bk_v_required+' is required. ' +
+                    'Your version is '+bokeh.__version__)
 
 class Dataexplorer(object):
     '''Dataexplorer class'''
