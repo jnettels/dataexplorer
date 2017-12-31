@@ -37,6 +37,10 @@ TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
 TODO: Find a way to display messages without ti_alert
 
+Known issues:
+- Plots fail when Time column includes 'NaT', so those columns are removed
+- Warning pop-up messages cannot be shown while the page is created
+
 '''
 
 import pandas as pd
@@ -197,7 +201,14 @@ def analyse_dataframe(self):
         if df[column_].dtype == object or is_categorical_dtype(df[column_]):
             cats.append(column_)
         else:
-            vals.append(column_)
+            if df[column_].dtype == 'datetime64[ns]' and \
+              pd.NaT in df[column_].tolist():
+                # 'Not a Time' in a time column makes the plots not render
+                # properly, so we need to sort those columns out
+                self.show_info('Column '+column_+' removed from data.')
+                df.drop(columns=[column_], inplace=True)
+            else:
+                vals.append(column_)
 
     if cats == []:
         # This is not an ideal usecase, but still possible
