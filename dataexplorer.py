@@ -100,6 +100,7 @@ class Dataexplorer(object):
         self.grid_needs_update = False
         self.table_needs_update = False
         self.corr_matrix_needs_update = False
+        self.classifs_need_update = False
         self.c_size = 5
         self.p_h = 250  # global setting for plot_height
         self.p_w = 250  # global setting for plot_width
@@ -243,6 +244,7 @@ def analyse_dataframe(self):
     self.cats = cats
     self.cats_labels = cats_labels
     self.vals_active = vals_active  # active value columns
+    self.cats_active = cats
 
     # The first category label is the default colour category
     self.colour_cat = cats[0]
@@ -290,7 +292,7 @@ def create_plots(self):
     span_set = {'location': 0, 'line_color': 'grey',
                 'line_dash': 'dashed', 'line_width': 1}
 
-    # A choice of combinatoric generators with decending number of results:
+    # A choice of combinatoric generators with descending number of results:
     if self.combinator == 4:
         combis = itertools.product(self.vals_active, repeat=2)
     elif self.combinator == 3:
@@ -423,8 +425,8 @@ def create_widgets_1(self):
     '''
     cbg_list = []
     div_list = []
-    for cat in self.cats:
-        labels = self.cats_labels[cat]  # Lables of current category
+    for cat in self.cats_active:
+        labels = self.cats_labels[cat]  # Labels of current category
         active_list = list(range(0, len(labels)))  # All labels start active
         cbg = CheckboxButtonGroup(labels=labels, active=active_list, width=999)
         cbg_list.append(cbg)
@@ -441,19 +443,19 @@ def create_widgets_1(self):
         cbg.on_click(partial(update_filters, caller=i, DatEx=self))
 
     sel = Select(title='Classification used for legend:',
-                 value=self.colour_cat, options=self.cats)
+                 value=self.colour_cat, options=self.cats_active)
     sel.on_change('value', partial(update_colour_cat, DatEx=self))
 
     # Prepare the layout of the widgets:
     # Create rows with pairs of Div() and CheckboxButtonGroup(), where the
-    # Div() contains the title. A list of those rows is combinded with a
+    # Div() contains the title. A list of those rows is combined with a
     # widgetbox of the Select widget.
     row_list = zip(div_list, cbg_list)
     div_and_cgb_cols = []
     for row_new in row_list:
         div_and_cgb_cols.append(row(*row_new))
 
-    self.wb_list_1 = [widgetbox(sel), div_and_cgb_cols]
+    self.wb_list_1 = [widgetbox(sel), column(div_and_cgb_cols)]
 
     return
 
@@ -495,9 +497,6 @@ def create_widgets_2(self):
 
     # Second implementation
     div2 = Div(text='''<div> </div>''', height=8, width=600)  # Empty text
-    div3 = Div(text='''<div style="position:relative; top:15px">
-               Select the value columns used in the plots:
-               </div>''', height=25, width=600)
     div4 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
 
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
@@ -545,19 +544,32 @@ def create_widgets_2(self):
     self.ti_alert.js_on_change('value',
                                CustomJS(code='''alert(cb_obj.value)'''))
 
+    div_vals = Div(text='''<div style="position:relative; top:15px">
+                   Select the value columns used in the plots:
+                   </div>''', height=25, width=600)
     active_list = list(range(0, min(len(self.vals), self.vals_max)))
-    cg = CheckboxGroup(labels=self.vals, active=active_list)
-    cg.on_change('active', partial(update_vals_active, DatEx=self))
+    cg_vals = CheckboxGroup(labels=self.vals, active=active_list)
+    cg_vals.on_change('active', partial(update_vals_active, DatEx=self))
+    cg_vals_col = column(cg_vals, sizing_mode='fixed', height=500, width=600,
+                         css_classes=['scrollable'])
+    self.cg_vals = cg_vals
 
-    cg_col = column(cg, sizing_mode='fixed', height=500, width=950,
-                    css_classes=['scrollable'])
+    div_cats = Div(text='''<div style="position:relative; top:15px">
+                   Select the classifications used in the plots:
+                   </div>''', height=25, width=600)
+    active_list = list(range(0, len(self.cats)))
+    cg_cats = CheckboxGroup(labels=self.cats, active=active_list)
+    cg_cats.on_change('active', partial(update_cats_active, DatEx=self))
+    cg_cats_col = column(cg_cats, sizing_mode='fixed', height=500, width=600,
+                         css_classes=['scrollable'])
+    self.cg_cats = cg_cats
 
     wb = [[but_load_new, rg_load],
           div2,
           [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
           [sl_vals_max, sl_comb],
-          div3,
-          cg_col,
+          [div_vals, div_cats],
+          [cg_vals_col, cg_cats_col],
           widgetbox(div4, self.ti_alert)]
     self.wb_list_2 = wb
 
@@ -590,7 +602,7 @@ def create_data_table(self):
 def create_data_table_columns(self):
     self.dt_columns = []
 
-    for name in self.cats + self.vals_active:
+    for name in self.cats_active + self.vals_active:
         if self.df[name].dtype == 'datetime64[ns]':
             dt_column = TableColumn(field=name, title=name,
                                     formatter=DateFormatter())
@@ -714,7 +726,7 @@ def update_filters(active, caller, DatEx):
 
     '''
     i = caller
-    cat_sel = DatEx.cats[i]  # Name of category label corresponding to caller
+    cat_sel = DatEx.cats_active[i]  # Classification corresponding to caller
     labels = DatEx.cats_labels[cat_sel]  # Categories within that label
 
     # Translate the active button positions into chosen category strings
@@ -830,6 +842,24 @@ def update_vals_active(attr, old, new, DatEx):
         DatEx.corr_matrix_needs_update = True
 
 
+def update_cats_active(attr, old, new, DatEx):
+
+    if len(new) == 0:
+        message = 'Please select at least one classification.'
+        DatEx.show_info(message)
+        DatEx.cg_cats.active = old  # Reset selection to old state
+        return
+    else:
+        # Translate the active button positions into chosen category strings:
+        DatEx.cats_active = [DatEx.cats[j] for j in new]
+        # If necessary, choose new default colour classification
+        if DatEx.colour_cat not in DatEx.cats_active:
+            DatEx.colour_cat = DatEx.cats_active[0]
+        # Set update required flags
+        DatEx.table_needs_update = True
+        DatEx.classifs_need_update = True
+
+
 def update_coords(active, DatEx):
     for span in DatEx.span_list:
         span.visible = active
@@ -902,6 +932,10 @@ def callback_tabs(attr, old, new, DatEx):
             update_gridplot(DatEx)
             DatEx.grid_needs_update = False
 
+        if DatEx.classifs_need_update:
+            update_classifs(DatEx)
+            DatEx.classifs_need_update = False
+
     elif new == 1:  # Second tab
         if (DatEx.table_needs_update):
             update_table(DatEx)
@@ -925,6 +959,20 @@ def update_gridplot(DatEx):
     # The children of a layout can be treated like a list:
     layout_1.children.remove(grid_old)
     layout_1.children.append(grid_new)
+
+
+def update_classifs(DatEx):
+    '''Update the classifications in the first tab.
+    Recreate the widgets 1 on the first tab and replace the old widgets.
+    '''
+    create_widgets_1(DatEx)  # Create the widgets on tab_1 from scratch
+    layout_1 = curdoc().roots[0].tabs[0].child  # Locate layout_1
+    layout_1.children[0].children = DatEx.wb_list_1  # Replace the old widgets
+    
+    # Reset all the filters that might have been chosen
+    prepare_filter(DatEx)
+    # Update all plots with the new filters and the current colour selection
+    update_colour_cat(0, 0, DatEx.colour_cat, DatEx)
 
 
 def update_table(DatEx):
@@ -1051,7 +1099,7 @@ def load_file(filepath, DatEx):
 
     logging.debug('Loaded ' + filepath)
 
-    '''Now that the new data is loaded we need to replace the old data or
+    '''Now that the new data is loaded, we need to replace the old data or
     append to it'''
     if not DatEx.load_mode_append:  # Means: Load mode = replace
         data_name = os.path.basename(filepath)
