@@ -6,7 +6,7 @@ Created on Fri Nov  3 08:10:21 2017
 
 The DataExplorer should help you explore correlations within your data. It
 features a user interface that shows scatter plots of all the variables in
-your data. Categories found in your data can be used to filter the views.
+your data. Classes found in your data can be used to filter the views.
 
 You can start this program with the "start_bokeh.cmd" batch file. This starts
 a Bokeh server that can be accessed from any computer in the network.
@@ -106,7 +106,7 @@ class Dataexplorer(object):
         self.p_w = 250  # global setting for plot_width
         self.load_mode_append = 0  # 0 equals False equals replace
 
-        # Set categories, their labels and value column names
+        # Set classifications, their classes and value column names
         try:
             analyse_dataframe(self)
         except Exception as ex:  # Is thrown if the df has an incorrect format
@@ -174,33 +174,33 @@ def create_dataexplorer_UI(df, filepath, data_name):
 
 
 def analyse_dataframe(self):
-    '''Analyse a given DataFrame to seperate the columns in categories and
-    values. "Object" columns become categories, their column names are saved
-    as category labels.
+    '''Analyse a given DataFrame to separate the columns in classes and
+    values. "Object" columns become class columns, their column names are saved
+    as classifications.
 
     Args:
         df (Pandas DataFrame) : The input data we want to explore.
 
     Returns:
-        cats (List) : List of the column names that contain categories.
+        classifs (List) : List of the column names that contain classes.
 
-        cats_labels (Dict) : Dictionary containing the categories associated
+        classes_dict (Dict) : Dictionary containing the categories associated
             with each label.
 
         vals (List) : List of the column names that contain values.
 
-        colour_cat (str) : Name of the current colour category label.
+        colour_classif (str) : Name of the current colour classification.
     '''
 
     df = self.df
 
     columns = df.columns.values.tolist()
-    cats = []
-    vals = []
+    classifs = []  # List of the classifications (columns that contain classes)
+    vals = []  # List of the column names that contain values
     for column_ in columns:
-        # The column contains categories or values
+        # The column contains classes or values
         if df[column_].dtype == object or is_categorical_dtype(df[column_]):
-            cats.append(column_)
+            classifs.append(column_)  # Classification found
         else:
             if df[column_].dtype == 'datetime64[ns]' and \
               pd.NaT in df[column_].tolist():
@@ -209,48 +209,48 @@ def analyse_dataframe(self):
                 self.show_info('Column '+column_+' removed from data.')
                 df.drop(columns=[column_], inplace=True)
             else:
-                vals.append(column_)
+                vals.append(column_)  # Value column found
 
-    if cats == []:
-        # This is not an ideal usecase, but still possible
+    if classifs == []:  # No classification were found
+        # This is not an ideal use case, but still possible
         self.show_info('Warning: No classification columns found in the file' +
                        ', using the filename as a class instead! Please ' +
                        'refer to example Excel file for instructions.')
         df['File'] = [self.data_name]*len(df)  # Fall back to a default
-        cats = ['File']
-    if vals == []:
+        classifs = ['File']
+    if vals == []:  # No value column were found
         # This cannot be accepted
         raise LookupError('Error: No value columns found in the file! Please' +
                           ' refer to example Excel file for instructions.')
 
-    cats_labels = dict()
-    for cat in cats:
-        try:  # Try to sort the categories
-            entries = list(set(df[cat]))
-            cats_labels[cat] = sorted(entries)
+    classes_dict = dict()  # A dict with the classes of each classification
+    for classif in classifs:
+        try:  # Try to sort the classes
+            classes = list(set(df[classif]))  # Get classes of classification
+            classes_dict[classif] = sorted(classes)  # Sort and store them
         except Exception as ex:  # Map to strings before sorting
-            df[cat] = list(map(str, df[cat]))
-            entries = list(set(df[cat]))
-            cats_labels[cat] = sorted(entries)
+            df[classif] = list(map(str, df[classif]))
+            classes = list(set(df[classif]))  # Get classes of classification
+            classes_dict[classif] = sorted(classes)  # Sort and store them
             pass
-#        print(cat, cats_labels[cat])
+#        print(classif, classes_dict[classif])
 
     if len(vals) > self.vals_max:
-        vals_active = vals[:self.vals_max]
+        vals_active = vals[:self.vals_max]  # Use a shortened list of vals
     else:
         vals_active = vals
 
     self.vals = vals
-    self.cats = cats
-    self.cats_labels = cats_labels
+    self.classifs = classifs
+    self.classes_dict = classes_dict
     self.vals_active = vals_active  # active value columns
-    self.cats_active = cats
+    self.classifs_active = classifs  # active classification columns
 
-    # The first category label is the default colour category
-    self.colour_cat = cats[0]
-    # Create / update 'Legend' and 'Colours' columns
+    # The first classification is the default colour classification
+    self.colour_classif = classifs[0]
+    # Create (or update) 'Legend' and 'Colours' columns
     update_colours(self)
-    # Create the ColumnDataSource object
+    # Create the Bokeh ColumnDataSource object from Pandas DataFrame
     self.source = ColumnDataSource(data=df)
 
     return
@@ -269,7 +269,7 @@ def create_plots(self):
 
         vals (List) : List of the column names that contain values.
 
-        colour_cat (str) : Name of the current colour category label.
+        colour_classif (str) : Name of the current colour category label.
 
     Returns:
         grid (Gridplot) : Grid containing all created figures.
@@ -311,7 +311,7 @@ def create_plots(self):
 
         # Prepare the HoverTool options:
         formatters_dict = {}
-        tips_list = [[cat, '@{'+cat+'}'] for cat in self.cats]
+        tips_list = [[classif, '@{'+classif+'}'] for classif in self.classifs]
 
         # DateTime columns require some very special treatment
         strftime = '%y-%m-%d %H:%M:%S'  # date and time format
@@ -410,7 +410,7 @@ def create_plots(self):
 
 
 def create_widgets_1(self):
-    '''Create and return a list of the widgets for tab 1. There are two types
+    '''Create and return a list of the widgets for tab 1. There are three types
     of widgets:
         1. CheckboxButtonGroup: Used to toggle the category filters
         2. Select: A dropdown menu used to define the current colour category
@@ -425,15 +425,16 @@ def create_widgets_1(self):
     '''
     cbg_list = []
     div_list = []
-    for cat in self.cats_active:
-        labels = self.cats_labels[cat]  # Labels of current category
-        active_list = list(range(0, len(labels)))  # All labels start active
-        cbg = CheckboxButtonGroup(labels=labels, active=active_list, width=999)
+    for classif in self.classifs_active:
+        classes = self.classes_dict[classif]  # Classes in a classification
+        active_list = list(range(0, len(classes)))  # All classes start active
+        cbg = CheckboxButtonGroup(labels=classes, active=active_list,
+                                  width=999)
         cbg_list.append(cbg)
 
         # Make the annotation for the CheckboxButtonGroup:
         div = Div(text='''<div style="text-align:right; font-size:12pt;
-                  border:6px solid transparent">'''+cat+''':</div>''',
+                  border:6px solid transparent">'''+classif+''':</div>''',
                   width=250)
         div_list.append(div)
 
@@ -443,8 +444,8 @@ def create_widgets_1(self):
         cbg.on_click(partial(update_filters, caller=i, DatEx=self))
 
     sel = Select(title='Classification used for legend:',
-                 value=self.colour_cat, options=self.cats_active)
-    sel.on_change('value', partial(update_colour_cat, DatEx=self))
+                 value=self.colour_classif, options=self.classifs_active)
+    sel.on_change('value', partial(update_colour_classif, DatEx=self))
 
     # Prepare the layout of the widgets:
     # Create rows with pairs of Div() and CheckboxButtonGroup(), where the
@@ -554,22 +555,23 @@ def create_widgets_2(self):
                          css_classes=['scrollable'])
     self.cg_vals = cg_vals
 
-    div_cats = Div(text='''<div style="position:relative; top:15px">
-                   Select the classifications used in the plots:
-                   </div>''', height=25, width=600)
-    active_list = list(range(0, len(self.cats)))
-    cg_cats = CheckboxGroup(labels=self.cats, active=active_list)
-    cg_cats.on_change('active', partial(update_cats_active, DatEx=self))
-    cg_cats_col = column(cg_cats, sizing_mode='fixed', height=500, width=600,
-                         css_classes=['scrollable'])
-    self.cg_cats = cg_cats
+    div_classifs = Div(text='''<div style="position:relative; top:15px">
+                       Select the classifications used in the plots:
+                       </div>''', height=25, width=600)
+    active_list = list(range(0, len(self.classifs)))
+    cg_classifs = CheckboxGroup(labels=self.classifs, active=active_list)
+    cg_classifs.on_change('active', partial(update_classifs_active,
+                                            DatEx=self))
+    cg_classifs_col = column(cg_classifs, sizing_mode='fixed', height=500,
+                             width=600, css_classes=['scrollable'])
+    self.cg_classifs = cg_classifs
 
     wb = [[but_load_new, rg_load],
           div2,
           [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
           [sl_vals_max, sl_comb],
-          [div_vals, div_cats],
-          [cg_vals_col, cg_cats_col],
+          [div_vals, div_classifs],
+          [cg_vals_col, cg_classifs_col],
           widgetbox(div4, self.ti_alert)]
     self.wb_list_2 = wb
 
@@ -602,7 +604,7 @@ def create_data_table(self):
 def create_data_table_columns(self):
     self.dt_columns = []
 
-    for name in self.cats_active + self.vals_active:
+    for name in self.classifs_active + self.vals_active:
         if self.df[name].dtype == 'datetime64[ns]':
             dt_column = TableColumn(field=name, title=name,
                                     formatter=DateFormatter())
@@ -671,13 +673,13 @@ def create_layout(self):
 
 def prepare_filter(self):
     ''' Prepare the filters used to explore the data. A filter is a list of
-    boolean values. Each category label needs its own filter. The filters start
+    boolean values. Each classification needs its own filter. The filters start
     all 'True' and will be modified later, based on the user input.
 
     Args:
-        cats (List) : List of the column names that contain categories.
+        classifs (List) : List of the column names that contain categories.
 
-        cats_labels (Dict) : Dictionary containing the categories associated
+        classes_dict (Dict) : Dictionary containing the categories associated
             with each label.
 
         df (Pandas DataFrame) : The input data we want to explore.
@@ -691,24 +693,24 @@ def prepare_filter(self):
     '''
     filter_list = []  # List of Pandas series
     filter_true = []  # Define here, overwrite below, so we can use again later
-    for cat in self.cats:
-        labels = self.cats_labels[cat]
-        filter_true = self.df[cat].isin(labels)  # Pandas series
+    for classif in self.classifs:
+        classes = self.classes_dict[classif]
+        filter_true = self.df[classif].isin(classes)  # Pandas series
         filter_list.append(filter_true)  # List of Pandas series
 
     self.filter_list = filter_list
     self.filter_true = filter_true
     self.filter_combined = filter_true
-    self.filter_combined_ri = filter_true  # Reindexed filter_combined
+    self.filter_combined_ri = filter_true  # Re-indexed filter_combined
     return
 
 
 def update_filters(active, caller, DatEx):
     '''Function associated with the CheckboxButtonGroups (CBG). Each CBG has
-    one corresponding filter (which belongs to one category label). The calling
+    one corresponding filter (which belongs to one classification). The calling
     CBG identifies itself with the "caller" argument. It delivers a list of the
     positions of the buttons which are now active (after the user input). The
-    positions are translated into category strings (which are the button
+    positions are translated into classes strings (which are the button
     labels). The filters are updated based on the selected categories and then
     the DataFrame is filtered accordingly. Updating Bokeh's source object makes
     all the figures update, as well.
@@ -725,18 +727,18 @@ def update_filters(active, caller, DatEx):
         None
 
     '''
-    i = caller
-    cat_sel = DatEx.cats_active[i]  # Classification corresponding to caller
-    labels = DatEx.cats_labels[cat_sel]  # Categories within that label
+    i = caller  # Index of classification in classifs_active
+    classif_sel = DatEx.classifs_active[i]  # Selected Classification
+    classes = DatEx.classes_dict[classif_sel]  # Categories within that label
 
     # Translate the active button positions into chosen category strings
-    labels_active = []
+    classes_active = []
     for j in active:
-        labels_active.append(labels[j])
+        classes_active.append(classes[j])
 
     # Get a boolean filter of the selected category label, where the selected
     # categories are "True". Store this in the correct filter_list
-    DatEx.filter_list[i] = DatEx.df[cat_sel].isin(labels_active)
+    DatEx.filter_list[i] = DatEx.df[classif_sel].isin(classes_active)
 
     # "Multiply" all filters to get one combined filter (Booleans are compared
     # with "&"). We start with all entries "True". Then we compare all filters
@@ -771,7 +773,7 @@ def update_CDS(DatEx):
     Returns:
         None
     '''
-    # The order of df may have changed due to sorting by the colour_cat.
+    # The order of df may have changed due to sorting by the colour_classif.
     # Thus the order of filter_combined and the df have to be matched
     DatEx.filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
 
@@ -783,11 +785,11 @@ def update_CDS(DatEx):
     # After this step the script is idle until the next user input occurs.
 
 
-def update_colour_cat(attr, old, new, DatEx):
+def update_colour_classif(attr, old, new, DatEx):
     '''Function associated with the colour category dropdown menu widget.
-    The selected colour category label becomes the new "colour_cat".
+    The selected colour category label becomes the new "colour_classif".
     '''
-    DatEx.colour_cat = new  # Save the new colour_cat
+    DatEx.colour_classif = new  # Save the new colour_classif
     update_colours(DatEx)  # Update the DataFrame
     update_CDS(DatEx)  # Update the ColumnDataSource
 
@@ -806,7 +808,7 @@ def update_colours(DatEx):
 
         df (Pandas DataFrame) : The input data we want to explore.
 
-        cats_labels (Dict) : Dictionary containing the categories associated
+        classes_dict (Dict) : Dictionary containing the categories associated
             with each label.
 
         source (ColumnDataSource) : Bokeh's data format.
@@ -815,10 +817,10 @@ def update_colours(DatEx):
         None
 
     '''
-    colourmap = get_colourmap(DatEx.cats_labels[DatEx.colour_cat])
-    DatEx.df.sort_values(by=[DatEx.colour_cat], inplace=True)
-    DatEx.df['Legend'] = DatEx.df[DatEx.colour_cat]
-    DatEx.df['Colours'] = [colourmap[x] for x in DatEx.df[DatEx.colour_cat]]
+    colourmap = get_colourmap(DatEx.classes_dict[DatEx.colour_classif])
+    DatEx.df.sort_values(by=[DatEx.colour_classif], inplace=True)
+    DatEx.df['Legend'] = DatEx.df[DatEx.colour_classif]
+    DatEx.df['Colours'] = [colourmap[x] for x in DatEx.df[DatEx.colour_classif]]
 
     return
 
@@ -842,19 +844,19 @@ def update_vals_active(attr, old, new, DatEx):
         DatEx.corr_matrix_needs_update = True
 
 
-def update_cats_active(attr, old, new, DatEx):
+def update_classifs_active(attr, old, new, DatEx):
 
     if len(new) == 0:
         message = 'Please select at least one classification.'
         DatEx.show_info(message)
-        DatEx.cg_cats.active = old  # Reset selection to old state
+        DatEx.cg_classifs.active = old  # Reset selection to old state
         return
     else:
         # Translate the active button positions into chosen category strings:
-        DatEx.cats_active = [DatEx.cats[j] for j in new]
+        DatEx.classifs_active = [DatEx.classifs[j] for j in new]
         # If necessary, choose new default colour classification
-        if DatEx.colour_cat not in DatEx.cats_active:
-            DatEx.colour_cat = DatEx.cats_active[0]
+        if DatEx.colour_classif not in DatEx.classifs_active:
+            DatEx.colour_classif = DatEx.classifs_active[0]
         # Set update required flags
         DatEx.table_needs_update = True
         DatEx.classifs_need_update = True
@@ -968,11 +970,11 @@ def update_classifs(DatEx):
     create_widgets_1(DatEx)  # Create the widgets on tab_1 from scratch
     layout_1 = curdoc().roots[0].tabs[0].child  # Locate layout_1
     layout_1.children[0].children = DatEx.wb_list_1  # Replace the old widgets
-    
+
     # Reset all the filters that might have been chosen
     prepare_filter(DatEx)
     # Update all plots with the new filters and the current colour selection
-    update_colour_cat(0, 0, DatEx.colour_cat, DatEx)
+    update_colour_classif(0, 0, DatEx.colour_classif, DatEx)
 
 
 def update_table(DatEx):
@@ -987,30 +989,30 @@ def update_corr_matrix(DatEx):
     layout_3.children.append(create_corr_matrix(DatEx))
 
 
-def get_colourmap(categories):
-    '''This function creates a dictionary of categories and their colours. It
+def get_colourmap(classes):
+    '''This function creates a dictionary of classes and their colours. It
     handles the possible exception thrown when the palette is not long enough.
 
     Args:
-        categories (List) : List of categories.
+        classes (List) : List of classes.
 
     Return:
-        colourmap (Dict) : Dictionary of categories and their colours.
+        colourmap (Dict) : Dictionary of classes and their colours.
 
     '''
     colourmap = dict()
     palette = palettes.all_palettes['Category20'][20]
-#    palette = palettes.all_palettes['Spectral'][len(categories)]
+#    palette = palettes.all_palettes['Spectral'][len(classes)]
 #    palette = palettes.all_palettes['Spectral'][11]
-    for i, cat in enumerate(categories):
+    for i, class_ in enumerate(classes):
         if i < 10:
             j = 2*i  # Even numbers
         else:
             j = 2*(i-9)-1  # Odd numbers
         try:
-            colourmap[cat] = palette[j]
+            colourmap[class_] = palette[j]
         except Exception:
-            colourmap[cat] = 'grey'
+            colourmap[class_] = 'grey'
     return colourmap
 
 
