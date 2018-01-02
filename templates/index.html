@@ -4,12 +4,12 @@
         <link id="favicon" rel="shortcut icon" type="image/png"
             sizes="32x32" href="dataexplorer/static/favicon-32x32.png">
         <meta charset="utf-8">
-        {{ bokeh_css }}
-        {{ bokeh_js }}
+        {{ bokeh_css|indent(8) }}
+        {{ bokeh_js|indent(8) }}
     </head>
     <body>
         <style type="text/css">
-          {% include 'styles.css' %}
+            {% include 'styles.css' %}
         </style>
         {{ plot_div|indent(8) }}
         {{ plot_script|indent(8) }}
