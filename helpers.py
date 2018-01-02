@@ -2,7 +2,7 @@
 '''
 Created on Fri Nov 24 09:54:53 2017
 
-@author: nettelstroth
+@author: Joris Nettelstroth
 
 Additional helper functions for the script dataexplorer.py
 
@@ -119,8 +119,10 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
         save_path (str) : Destination for the uploaded file.
 
         callback (func) : External function that is called on button press.
+        
+        DatEx (Dataexplorer): The object containing all the session information
 
-        label (str) : Button label text (optional).
+        label (str, optional) : Button label text.
 
     Return:
         button (widget) : Bokeh widget object, to be placed in a layout.

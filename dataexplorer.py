@@ -36,6 +36,7 @@ is required for the batch file to work.
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
 TODO: Find a way to display messages without ti_alert
+TODO: Transfer session settings via DatEx.__dict__
 
 Known issues:
 - Plots fail when Time column includes 'NaT', so those columns are removed
@@ -63,7 +64,6 @@ from bokeh.plotting import figure
 from bokeh import palettes
 from bokeh.io import curdoc
 from functools import partial
-from tkinter import Tk, filedialog  # , messagebox
 from pandas.api.types import is_categorical_dtype
 # from pandas.api.types import CategoricalDtype
 from bokeh.io import export_png, export_svgs
@@ -87,16 +87,43 @@ if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
                     'Your version is '+bokeh.__version__)
 
 class Dataexplorer(object):
-    '''Dataexplorer class'''
+    '''The Dataexplorer class is the central element of the structure of this
+    application. By creating a Dataexplorer object, all tasks necessary to
+    produce the Bokeh user interface are performed.
+    Furthermore, the Dataexplorer object stores all the settings and properties
+    of the current session of the application.
+    Most functions in this Python script only take the Dataexlorer object
+    as an input parameter and can manipulate its properties directly.
+    When new data is loaded, a new Dataexplorer object must be created to
+    recreate the user interface. Certain settings can be handed over to the
+    new object to make them survive the switch of sessions.
+    '''
 
     def __init__(self, df, filepath, data_name, combinator=1, vals_max=6):
-        '''Return a Dataexplorer object'''
+        '''Return a Dataexplorer object, the object containing all the session
+        information. Initialize all object properties.
+        Perform all the tasks necessary to create the Data Explorer user
+        interface by calling the required functions.
+
+        Args:
+            df (Pandas DataFrame) : The input data we want to explore.
+
+            filepath (str) : Path to file to load.
+
+            data_name (str) : The filename of the current data set.
+
+            combinator (int, optional): A identifier for combinatoric generator
+
+            vals_max (int, optional): A threshold for number of value columns
+
+        Returns:
+            None
+        '''
         self.df = df
-        self.vals_max = vals_max
+        self.vals_max = vals_max  # Threshold for number of value columns
         self.filepath = filepath
         self.data_name = data_name
-        self.combinator = combinator
-        self.combinator_new = combinator
+        self.combinator = combinator  # Identifier for combinatoric generator
         self.grid_needs_update = False
         self.table_needs_update = False
         self.corr_matrix_needs_update = False
@@ -152,44 +179,16 @@ class Dataexplorer(object):
         logging.critical(message)  # Bokeh's server logging funtion
 
 
-def create_dataexplorer_UI(df, filepath, data_name):
-    '''Performs all the tasks necessary to create the Data Explorer user
-    interface by calling the required functions. It is also used to recreate
-    the UI when new data is loaded.
-
-    Args:
-        df (Pandas DataFrame) : The input data we want to explore.
-
-        filepath (str) : Path to file to load.
-
-        data_name (str) : The (file)name of the current data set.
-
-    Returns:
-        None
-
-    '''
-    Dataexplorer(df, filepath, data_name)
-
-    # The script ends here (but Bokeh keeps waiting for user input)
-
-
 def analyse_dataframe(self):
     '''Analyse a given DataFrame to separate the columns in classes and
     values. "Object" columns become class columns, their column names are saved
     as classifications.
 
     Args:
-        df (Pandas DataFrame) : The input data we want to explore.
+        self (Dataexplorer): The object containing all the session information
 
     Returns:
-        classifs (List) : List of the column names that contain classes.
-
-        classes_dict (Dict) : Dictionary containing the categories associated
-            with each label.
-
-        vals (List) : List of the column names that contain values.
-
-        colour_classif (str) : Name of the current colour classification.
+        None
     '''
 
     df = self.df
@@ -247,7 +246,7 @@ def analyse_dataframe(self):
     self.classifs_active = classifs  # active classification columns
 
     # The first classification is the default colour classification
-    self.colour_classif = classifs[0]
+    self.colour_classif = classifs[0]  # Name of current colour classification
     # Create (or update) 'Legend' and 'Colours' columns
     update_colours(self)
     # Create the Bokeh ColumnDataSource object from Pandas DataFrame
@@ -259,20 +258,14 @@ def analyse_dataframe(self):
 def create_plots(self):
     '''Use Bokeh to plot the data in an interactive way. The Bokeh settings
     are defined in this function, as well as the combinatoric generator which
-    generates the combinations of all the "vals". For each combination, a
+    generates the combinations of all the 'vals'. For each combination, a
     figure is created and all of those figures are combined into one grid.
 
     Args:
-        source (ColumnDataSource) : Bokeh's data format.
-
-        df (Pandas DataFrame) : The input data we want to explore.
-
-        vals (List) : List of the column names that contain values.
-
-        colour_classif (str) : Name of the current colour category label.
+        self (Dataexplorer): The object containing all the session information
 
     Returns:
-        grid (Gridplot) : Grid containing all created figures.
+        grid (Gridplot) : Grid containing all created figures
 
     '''
 
@@ -283,7 +276,7 @@ def create_plots(self):
                 # 'active_scroll': 'wheel_zoom',
                 'plot_height': self.p_h, 'plot_width': self.p_w,
                 'lod_factor': 1000,  # level-of-detail decimation
-                # 'output_backend': 'webgl',
+                # 'output_backend': 'webgl',  # Better performance
                 # 'output_backend': 'svg',  # For export with SaveTool (Slow!)
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
@@ -303,9 +296,11 @@ def create_plots(self):
         combis = itertools.combinations(self.vals_active, r=2)
 
     self.fig_list = []  # List with the complete figures
-    self.glyph_list = []
-    self.span_list = []
+    self.glyph_list = []  # List of GlyphRenderers
+    self.span_list = []  # List of spans (coordinate center lines)
+
     for x_val, y_val in combis:
+        # Is x_axis or y_axis of data type 'datetime'?
         x_time = (self.df[x_val].dtype == 'datetime64[ns]')
         y_time = (self.df[y_val].dtype == 'datetime64[ns]')
 
@@ -361,8 +356,9 @@ def create_plots(self):
         p.add_layout(span_w)
 
     '''
-    The plots are completed, now we add a figure for the legend. Here we remove
-    everything but the legend itself. This figure is last in the grid.
+    The plots are completed, now we add two figures for the legends that go to
+    the top and bottom of the page. For a nice look, we remove all parts of the
+    figures but the legends themselves.
     '''
     legend_top = figure(plot_height=50, plot_width=1850)
     legend_bot = figure(plot_height=2*self.p_h, plot_width=2*self.p_w)
@@ -392,7 +388,7 @@ def create_plots(self):
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
                     toolbar_options={'logo': None})
 
-    ''' Make the plots scrollable'''
+    '''Make the plots scrollable'''
     # The children of 'grid' are the ToolbarBox [0] and a column containing
     # all the rows of plots [1].
     # We assign this column the CSS class 'scrollable'. Together with the style
@@ -410,17 +406,16 @@ def create_plots(self):
 
 
 def create_widgets_1(self):
-    '''Create and return a list of the widgets for tab 1. There are three types
-    of widgets:
+    '''Create and return a list of the widgets for tab 'Scatters'. There are
+    two types of widgets:
         1. CheckboxButtonGroup: Used to toggle the category filters
         2. Select: A dropdown menu used to define the current colour category
-        3. Button: Used to load a new file and then rebuild the whole layout
 
     Args:
         self (Dataexplorer) : The object containing all the session information
 
     Returns:
-        wb_list_1 (List) : A list of widgetboxes, each containing widgets.
+        None
 
     '''
     cbg_list = []
@@ -462,59 +457,53 @@ def create_widgets_1(self):
 
 
 def create_widgets_2(self):
-    '''Create and return a list of the widgets for tab 2. There are three
-    types of widgets:
+    '''Create and store a list of the widgets for tab 'Settings'. There are
+    several types of widgets:
         1. Button: Used to load a new file and then rebuild the whole layout
         2. Div: Print text
-        3. TextInput: Field for user input
+        3. TextInput: Field for user input (used for message pop-ups)
+        4. RadioGroup: Single choice selection
+        5. CheckboxGroup: Multiple choice selection
+        6. Slider: Input number values in a predefined range
+        7. Toggle: A button to toggle two settings
+
+    All widgets need an associated callback function that is triggered when
+    the state of the widget changes. These callback functions get access to the
+    Dataexplorer object and manipulate its properties. Some changes have an
+    instantaneous effect (e.g. size of scatter points), if they do not have
+    a huge performance impact. Most changes, however, are only triggered
+    when the user switches the tabs (and thereby applies those changes).
+    For these cases, the callback function set various '*_needs_update' flags.
 
     Args:
-        filepath (str) : Path to file to load.
+        self (Dataexplorer): The object containing all the session information
 
-        ...
-
-    Return:
-        wb_list_2 (List) : A list of widgetboxes, each containing widgets.
-
+    Returns:
+        None
     '''
-    # First implementation
-#    but_load_new = Button(label='Show file dialog', button_type='success')
-#    but_load_new.on_click(load_file_dialog)
 
-#    div1 = Div(text='''<div>
-#                  Load a new file with a file dialog (only works if you run
-#                  this script locally)
-#                  </div>''', width=600)
-#    div2 = Div(text='''<div> </div>''', height=33, width=600)  # Empty text
-#
-#    text_input = TextInput(value=filepath,
-#                           title='Load this file (the server must have '
-#                           'access to the file):',
-#                           width=1000)
-#
-#    but_reload = Button(label='Load file', button_type='success')
-#    but_reload.on_click(partial(reload_file, text_input))
-#    wb = widgetbox(div1, but_load_new, div2, text_input, but_reload)
-
-    # Second implementation
     div2 = Div(text='''<div> </div>''', height=8, width=600)  # Empty text
     div4 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
 
+    # Button: Upload new file
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     but_load_new = new_upload_button(save_path, load_file, self,
                                      label='Upload a new file to the server')
 
+    # RadioGroup: Replace or append current data with new file
     rg_load = RadioGroup(labels=['Replace current data with new file',
                                  'Append new file to current data'],
                          active=self.load_mode_append)
     rg_load.on_click(partial(update_load_mode, DatEx=self))
 
+    # Toggle: Switch coordinate center lines on and off
     tgl_coords = Toggle(label='Toggle coordinate center lines',
                         active=True)
     tgl_coords.on_click(partial(update_coords, DatEx=self))
 
+    # Sliders: Sliders for various settings
     sl_c_size = Slider(start=1, end=20, step=1,
                        value=self.c_size,
                        title='Set the size of the scatter points')
@@ -539,12 +528,15 @@ def create_widgets_2(self):
                      title='Set complexity of the combinatoric generator')
     sl_comb.on_change('value', partial(update_combinator, DatEx=self))
 
+    # TextInput: Is used to execute JavaScript code that shows a pop-up message
     self.ti_alert = TextInput(value='',
                               title='Latest (error) message:',
                               width=1000)
     self.ti_alert.js_on_change('value',
                                CustomJS(code='''alert(cb_obj.value)'''))
 
+    # CheckboxGroup: Two multiple choice selections for the used value columns
+    # and classifications. The groups are wrapped in scrollable columns.
     div_vals = Div(text='''<div style="position:relative; top:15px">
                    Select the value columns used in the plots:
                    </div>''', height=25, width=600)
@@ -566,23 +558,23 @@ def create_widgets_2(self):
                              width=600, css_classes=['scrollable'])
     self.cg_classifs = cg_classifs
 
-    wb = [[but_load_new, rg_load],
-          div2,
-          [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
-          [sl_vals_max, sl_comb],
-          [div_vals, div_classifs],
-          [cg_vals_col, cg_classifs_col],
-          widgetbox(div4, self.ti_alert)]
-    self.wb_list_2 = wb
+    # Arrange the positions of widgets by listing them in the desired order
+    self.wb_list_2 = [[but_load_new, rg_load],
+                      div2,
+                      [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
+                      [sl_vals_max, sl_comb],
+                      [div_vals, div_classifs],
+                      [cg_vals_col, cg_classifs_col],
+                      widgetbox(div4, self.ti_alert)]
 
     return
 
 
 def create_data_table(self):
-    '''Create and return the DataTable widget.
+    '''Create and return the DataTable widget that is shown in its own tab.
 
     Args:
-        source (ColumnDataSource) : The Bokeh source object
+        self (Dataexplorer): The object containing all the session information
 
     Return:
         data_table (DataTable) : Bokeh DataTable widget.
@@ -602,6 +594,16 @@ def create_data_table(self):
 
 
 def create_data_table_columns(self):
+    '''Create the TableColumn objects required by create_data_table(). Calling
+    it again allows an update of the column selection (after classifs_active
+    or vals_active have changed).
+
+    Args:
+        self (Dataexplorer): The object containing all the session information
+
+    Returns:
+        dt_columns (TableColumn): The data table column objects
+    '''
     self.dt_columns = []
 
     for name in self.classifs_active + self.vals_active:
@@ -616,14 +618,14 @@ def create_data_table_columns(self):
 
 
 def create_corr_matrix(self):
-    '''
-    Create a matrix plot containing the correlation coefficients of the
+    '''Create a matrix plot containing the correlation coefficients of the
     active value columns. The applied filters are taken into account.
 
     Args:
-        self
+        self (Dataexplorer): The object containing all the session information
+
     Returns:
-        None
+        corr_matrix (figure): A Bokeh figure containing the rectangle plot
     '''
     corr_matrix = self.df[self.filter_combined_ri][self.vals_active].corr(
             method='pearson')
@@ -633,20 +635,18 @@ def create_corr_matrix(self):
 
 
 def create_layout(self):
-    '''Create a Bokeh "layouts" from the widgetboxes and grid of figures.
-    The layouts are organized into tabs and those are added as "root" to the
-    current Bokeh document.
+    '''Create Bokeh 'layouts' from the widgetboxes and grid of figures and the
+    content for the other tabs. The layouts are organized into tabs and those
+    are added as 'root' to the current Bokeh document.
+
+    Can be called again to remove the previous document root and add the new
+    one after new data has been loaded.
+    The 'tabs' widget is associated with a callback function that allows
+    triggering events when the user switches between the tabs (used to update
+    their content).
 
     Args:
-        wb_list_1 (List) : A list of widgetboxes, each containing widgets.
-
-        grid (Gridplot) : Grid containing all created figures.
-
-        wb_list_2 (List) : A list of widgetboxes, each containing widgets.
-
-        data_table (DataTable) : Bokeh DataTable widget.
-
-        data_name (str) : The (file)name of the current data set.
+        self (Dataexplorer): The object containing all the session information
 
     Return:
         None
@@ -672,23 +672,19 @@ def create_layout(self):
 
 
 def prepare_filter(self):
-    ''' Prepare the filters used to explore the data. A filter is a list of
-    boolean values. Each classification needs its own filter. The filters start
+    '''Prepare the filters used to explore the data. A filter is a Pandas
+    series with the same index as the main DataFrame and booleans as values.
+    Each classification needs its own filter for its classes. The filters start
     all 'True' and will be modified later, based on the user input.
 
+    The result is filter_list, a list containing all the filters, one for each
+    classification.
+
     Args:
-        classifs (List) : List of the column names that contain categories.
+        self (Dataexplorer): The object containing all the session information
 
-        classes_dict (Dict) : Dictionary containing the categories associated
-            with each label.
-
-        df (Pandas DataFrame) : The input data we want to explore.
-
-    Return:
-        filter_list (List) : List containing all the filters, one for each
-            category.
-        filter_true (Series) : A Pandas series with the length of one column,
-            where all entries are "True".
+    Returns:
+        None
 
     '''
     filter_list = []  # List of Pandas series
@@ -711,7 +707,7 @@ def update_filters(active, caller, DatEx):
     CBG identifies itself with the "caller" argument. It delivers a list of the
     positions of the buttons which are now active (after the user input). The
     positions are translated into classes strings (which are the button
-    labels). The filters are updated based on the selected categories and then
+    labels). The filters are updated based on the selected classes and then
     the DataFrame is filtered accordingly. Updating Bokeh's source object makes
     all the figures update, as well.
 
@@ -719,9 +715,9 @@ def update_filters(active, caller, DatEx):
         active (List) : A list of the positions of those buttons, which are
             currently active.
 
-        caller (int) : Number of the ButtonGroup which is calling this function
+        caller (int) : Number of the CBG which is calling this function
 
-        ... and lots more
+        DatEx (Dataexplorer): The object containing all the session information
 
     Returns:
         None
@@ -749,7 +745,7 @@ def update_filters(active, caller, DatEx):
         filter_combined = filter_combined & filter_i
     DatEx.filter_combined = filter_combined
 
-    update_CDS(DatEx)  # Apply the new filter_combined
+    update_CDS(DatEx)  # Update ColumnDataSource to apply the filter_combined
 
     # The 'view' function seemed useful, but may not be flexible enough:
     # - Filtering one "column_name" for multiple "group"s seems not possible
@@ -786,8 +782,22 @@ def update_CDS(DatEx):
 
 
 def update_colour_classif(attr, old, new, DatEx):
-    '''Function associated with the colour category dropdown menu widget.
-    The selected colour category label becomes the new "colour_classif".
+    '''Function associated with drop-down menu widget for the classification
+    used for the legend.
+    The selected classification becomes the new 'colour_classif', then the
+    correct updates have to be applied.
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (str): Previous user selection
+
+        new (str): Selected classification name
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
     '''
     DatEx.colour_classif = new  # Save the new colour_classif
     update_colours(DatEx)  # Update the DataFrame
@@ -795,23 +805,17 @@ def update_colour_classif(attr, old, new, DatEx):
 
 
 def update_colours(DatEx):
-    '''
-    'Colours' is a column of both the DataFrame and the source which contains
-    the current colours. It is updated, just like the 'Legend' column.
+    '''Update (or create) the columns 'Legend' and 'Colours' of the DataFrame.
+    The column 'Colours' contains the hex values of the colours of each row.
+    All figures reference this column as their source for the glyph colours.
+    The column 'Legend' contains the class names of the classification used
+    for the legend. The legend figures reference this column as their source
+    for the legend text.
+    The DataFrame is sorted by the contents of the colour_classif column to
+    make the legend figures display properly sorted.
 
     Args:
-        attr (str) : The widget's attribute that is told about in old and new
-
-        old (str) : Previously selected colour category label.
-
-        new (str) : Selected colour category label.
-
-        df (Pandas DataFrame) : The input data we want to explore.
-
-        classes_dict (Dict) : Dictionary containing the categories associated
-            with each label.
-
-        source (ColumnDataSource) : Bokeh's data format.
+        DatEx (Dataexplorer): The object containing all the session information
 
     Return:
         None
@@ -826,6 +830,23 @@ def update_colours(DatEx):
 
 
 def update_vals_active(attr, old, new, DatEx):
+    '''Function associated with value column selection widget 'cg_vals'.
+    Updates the vals_active (setting of active value columns), or refuses the
+    update if the threshold is crossed. Setting the *_needs_update flags will
+    apply the changes when the user switches the tabs.
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (List): Previous user selection
+
+        new (List): Selected value columns (as list of button positions)
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
 
     if len(new) > DatEx.vals_max:
         message = 'Maximum of '+str(DatEx.vals_max)+' value columns exceeded.'
@@ -845,6 +866,23 @@ def update_vals_active(attr, old, new, DatEx):
 
 
 def update_classifs_active(attr, old, new, DatEx):
+    '''Function associated with classification selection widget 'cg_classifs'.
+    Updates the classifs_active (setting of active classifications), or refuses
+    the update if the threshold is crossed. Setting the *_needs_update flags
+    will apply the changes when the user switches the tabs.
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (List): Previous user selection
+
+        new (List): Selected classifications (as list of button positions)
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
 
     if len(new) == 0:
         message = 'Please select at least one classification.'
@@ -863,71 +901,148 @@ def update_classifs_active(attr, old, new, DatEx):
 
 
 def update_coords(active, DatEx):
+    '''Function associated with toggle widget 'tgl_coords'.
+    Directly updates the 'visible' attribute of the spans (which are the lines
+    marking the center of the coordinate system).
+
+    Args:
+        active (bool): State of the toggle button
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     for span in DatEx.span_list:
         span.visible = active
 
 
 def update_load_mode(active, DatEx):
+    '''Function associated with single choice selection widget used to choose
+    between replacing or appending data on the next upload 'rg_load'.
+    Directly updates the 'load_mode_append' parameter.
+
+    Args:
+        active (int): State of the selection (0 or 1)
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     DatEx.load_mode_append = active
 
 
 def update_c_size(attr, old, new, DatEx):
+    '''Function associated with the scatter point size slider widget sl_c_size.
+    Updates the size property of all GlyphRenderers (i.e. the scatter points).
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
+        new (int): Selected size
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     DatEx.c_size = new
     for glpyh_renderer in DatEx.glyph_list:
         glpyh_renderer.glyph.size = DatEx.c_size
 
 
 def update_p_h(attr, old, new, DatEx):
+    '''Function associated with the plot height slider widget 'sl_p_h'. Updates
+    the 'p_h' property. Change is applied on the next tab switch.
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
+        new (int): Selected size
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     DatEx.p_h = new
     DatEx.grid_needs_update = True
 
 
 def update_p_w(attr, old, new, DatEx):
+    '''Function associated with the plot width slider widget 'sl_p_w'. Updates
+    the 'p_w' property. Change is applied on the next tab switch.
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
+        new (int): Selected size
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     DatEx.p_w = new
     DatEx.grid_needs_update = True
 
 
 def update_vals_max(attr, old, new, DatEx):
-    '''This function is triggered by the "sl_vals_max" slider widget.
+    '''This function is triggered by the 'sl_vals_max' slider widget.
     The user input value 'new' is stored in the global variable vals_max.
 
     Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
         new (int) : User input
 
     Return:
         None
-
     '''
     DatEx.vals_max = new
 
 
 def update_combinator(attr, old, new, DatEx):
-    '''This function is triggered by the "sl_comb" slider widget.
+    '''This function is triggered by the 'sl_comb' slider widget.
     The user input value 'new' is stored in the global variable combinator.
 
     Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
         new (int) : User input
 
     Return:
         None
-
     '''
     DatEx.combinator = new
     DatEx.grid_needs_update = True
 
 
 def callback_tabs(attr, old, new, DatEx):
-    '''This function is triggered by selecting any of the tabs. If the first
-    tab is selected and if the combinator or vals_active were updated since
-    the first tab was used last, the gridplot is regenerated with the new
-    settings.
+    '''This function is triggered by selecting any of the tabs. Depending on
+    the selected tab and the state of the *_needs_update flags, updates to
+    the tab's contents are triggered.
 
     Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
         new (int) : Number of selected tab.
 
     Return:
         None
-
     '''
     if new == 0:  # First tab
         if DatEx.grid_needs_update:
@@ -950,6 +1065,14 @@ def callback_tabs(attr, old, new, DatEx):
 
 
 def update_gridplot(DatEx):
+    '''Update the gridplot in the 'Scatters' tab.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     # Create a new grid:
     grid_new = create_plots(DatEx)
 
@@ -964,8 +1087,14 @@ def update_gridplot(DatEx):
 
 
 def update_classifs(DatEx):
-    '''Update the classifications in the first tab.
-    Recreate the widgets 1 on the first tab and replace the old widgets.
+    '''Update the classifications in the 'Scatters' tab.
+    Recreate the widgets on the first tab and replace the old widgets.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
     '''
     create_widgets_1(DatEx)  # Create the widgets on tab_1 from scratch
     layout_1 = curdoc().roots[0].tabs[0].child  # Locate layout_1
@@ -978,11 +1107,27 @@ def update_classifs(DatEx):
 
 
 def update_table(DatEx):
+    '''Update the columns in the 'Data Table' tab.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     create_data_table_columns(DatEx)
     DatEx.data_table.columns = DatEx.dt_columns
 
 
 def update_corr_matrix(DatEx):
+    '''Update the correlation matrix figure in the 'Correlation' tab.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
     layout_3 = curdoc().roots[0].tabs[2].child
     # The children of a layout can be treated like a list:
     layout_3.children.remove(DatEx.corr_matrix)
@@ -991,14 +1136,16 @@ def update_corr_matrix(DatEx):
 
 def get_colourmap(classes):
     '''This function creates a dictionary of classes and their colours. It
-    handles the possible exception thrown when the palette is not long enough.
+    handles the possible exception thrown when the palette is not long enough
+    by appending the colour grey. The regular colours are made more
+    distinguishable by first using the even, then the odd numbers in the
+    predefined colour palette.
 
     Args:
         classes (List) : List of classes.
 
     Return:
         colourmap (Dict) : Dictionary of classes and their colours.
-
     '''
     colourmap = dict()
     palette = palettes.all_palettes['Category20'][20]
@@ -1016,52 +1163,6 @@ def get_colourmap(classes):
     return colourmap
 
 
-def load_file_dialog():
-    '''This function is triggered by the "load new file" button and presents
-    a file dialog. The user choice is handed to the load_file() function.
-
-    Args:
-        None
-
-    Return:
-        None
-
-    '''
-    cwd = os.getcwd()
-#    root = Tk()
-#    dirname = filedialog.askdirectory(parent=root,
-#                                        initialdir=cwd,
-#                                        title='Please select a directory')
-#    if len(dirname) > 0:
-#        print("You chose %s" % dirname)
-
-    root = Tk()
-    root.withdraw()  # Important: Hides the empty 'root' window
-    root.filename = filedialog.askopenfilename(initialdir=cwd,
-                                               title="Please choose your file",
-                                               filetypes=(
-                                                       ("Excel", "*.xlsx"),
-                                                       ("all files", "*.*"),
-                                                       )
-                                               )
-    load_file(root.filename)
-
-
-# def reload_file(ti_alert):
-#    '''This function is triggered by the "load file" button. It asks the
-#    ti_alert widget for its current value and hands that to load_file().
-#
-#    Args:
-#        ti_alert (TextInput) : Bokeh widget.
-#
-#    Return:
-#        None
-#
-#    '''
-#    filepath = ti_alert.value
-#    load_file(filepath)
-
-
 def load_file(filepath, DatEx):
     '''The chosen file is read into a Pandas DataFrame and the UI is recreated.
     Supported file types are '.xlsx' and '.xls'. Pandas will also try to read
@@ -1070,17 +1171,18 @@ def load_file(filepath, DatEx):
     in read_csv_formats().
     In order to regenerate all widgets and figures, Dataexplorer() is called to
     create a new object. The initialization of that object finishes with
-    calling create_layout(), which "cleares" the current Bokeh document and
+    calling create_layout(), which 'clears' the current Bokeh document and
     adds a new root to the empty document.
 
     Args:
         filepath (str) : The path to the file to load.
 
+        DatEx (Dataexplorer): The object containing all the session information
+
     Return:
         None
-
     '''
-    if len(filepath) == 0:  # No file selected, or file dialog cancelled
+    if len(filepath) == 0:  # No file selected, or file dialog canceled
         return  # Return, instead of completing the function
 
     logging.info('Trying to open file: ' + filepath)
@@ -1095,7 +1197,7 @@ def load_file(filepath, DatEx):
         else:
             raise NotImplementedError('Unsupported file extension: '+filetype)
     except Exception as ex:
-        # Show the error message in the terminal and in a pop-up messagebox:
+        # Show the error message in the terminal and in a pop-up message box:
         DatEx.show_info('File not loaded: '+filepath+' \n'+str(ex))
         return  # Return, instead of completing the function
 

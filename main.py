@@ -3,7 +3,7 @@
 '''
 The DataExplorer should help you explore correlations within your data. It
 features a user interface that shows scatter plots of all the variables in
-your data. Categories found in your data can be used to filter the views.
+your data. Classes found in your data can be used to filter the views.
 
 You can start this program with the "start_bokeh.cmd" batch file. This starts
 a Bokeh server that can be accessed from any computer in the network.
