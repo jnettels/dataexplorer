@@ -35,7 +35,6 @@ is required for the batch file to work.
 
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
-TODO: Find a way to display messages without ti_alert
 TODO: Transfer session settings via DatEx.__dict__
 
 Known issues:
@@ -85,6 +84,7 @@ bk_v_required = '0.12.13'
 if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
     logging.critical('Warning: Bokeh version '+bk_v_required+' is required. ' +
                     'Your version is '+bokeh.__version__)
+
 
 class Dataexplorer(object):
     '''The Dataexplorer class is the central element of the structure of this
@@ -137,7 +137,7 @@ class Dataexplorer(object):
         try:
             analyse_dataframe(self)
         except Exception as ex:  # Is thrown if the df has an incorrect format
-            self.show_info(str(ex))
+            show_info(str(ex))
             return  # Skip the rest in case of an exception
 
         # Use Bokeh to plot the data in an interactive way
@@ -160,23 +160,6 @@ class Dataexplorer(object):
 
         # Create a Bokeh "layout" from the widgets and grid of figures
         create_layout(self)
-
-    def show_info(self, message):
-        '''Shows a notification window with given title and message.
-
-        Args:
-            message (str) : Message text.
-
-        Return:
-            None
-        '''
-        try:  # The ti_alert widget may not have been created yet
-            timestamp = pd.datetime.now().time().strftime('%H:%M')
-            self.ti_alert.value = timestamp + ' ' + message
-        except Exception as ex:
-            logging.critical(ex)
-            pass
-        logging.critical(message)  # Bokeh's server logging funtion
 
 
 def analyse_dataframe(self):
@@ -205,16 +188,17 @@ def analyse_dataframe(self):
               pd.NaT in df[column_].tolist():
                 # 'Not a Time' in a time column makes the plots not render
                 # properly, so we need to sort those columns out
-                self.show_info('Column '+column_+' removed from data.')
+                show_info('Warning: Column "'+column_+'" removed from '+
+                          'data, because of missing entries.')
                 df.drop(columns=[column_], inplace=True)
             else:
                 vals.append(column_)  # Value column found
 
     if classifs == []:  # No classification were found
         # This is not an ideal use case, but still possible
-        self.show_info('Warning: No classification columns found in the file' +
-                       ', using the filename as a class instead! Please ' +
-                       'refer to example Excel file for instructions.')
+        show_info('Info: No classification columns found in the file' +
+                  ', using the filename as a class instead! Please ' +
+                  'refer to example Excel file for instructions.')
         df['File'] = [self.data_name]*len(df)  # Fall back to a default
         classifs = ['File']
     if vals == []:  # No value column were found
@@ -459,13 +443,12 @@ def create_widgets_1(self):
 def create_widgets_2(self):
     '''Create and store a list of the widgets for tab 'Settings'. There are
     several types of widgets:
-        1. Button: Used to load a new file and then rebuild the whole layout
-        2. Div: Print text
-        3. TextInput: Field for user input (used for message pop-ups)
-        4. RadioGroup: Single choice selection
-        5. CheckboxGroup: Multiple choice selection
-        6. Slider: Input number values in a predefined range
-        7. Toggle: A button to toggle two settings
+        - Button: Used to load a new file and then rebuild the whole layout
+        - Div: Print text
+        - RadioGroup: Single choice selection
+        - CheckboxGroup: Multiple choice selection
+        - Slider: Input number values in a predefined range
+        - Toggle: A button to toggle two settings
 
     All widgets need an associated callback function that is triggered when
     the state of the widget changes. These callback functions get access to the
@@ -482,8 +465,6 @@ def create_widgets_2(self):
         None
     '''
 
-    div2 = Div(text='''<div> </div>''', height=8, width=600)  # Empty text
-    div4 = Div(text='''<div> </div>''', height=11, width=600)  # Empty text
 
     # Button: Upload new file
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
@@ -528,13 +509,6 @@ def create_widgets_2(self):
                      title='Set complexity of the combinatoric generator')
     sl_comb.on_change('value', partial(update_combinator, DatEx=self))
 
-    # TextInput: Is used to execute JavaScript code that shows a pop-up message
-    self.ti_alert = TextInput(value='',
-                              title='Latest (error) message:',
-                              width=1000)
-    self.ti_alert.js_on_change('value',
-                               CustomJS(code='''alert(cb_obj.value)'''))
-
     # CheckboxGroup: Two multiple choice selections for the used value columns
     # and classifications. The groups are wrapped in scrollable columns.
     div_vals = Div(text='''<div style="position:relative; top:15px">
@@ -558,14 +532,16 @@ def create_widgets_2(self):
                              width=600, css_classes=['scrollable'])
     self.cg_classifs = cg_classifs
 
+    # Spacer
+    div_space_1 = Div(text='''<div> </div>''', height=8, width=600)  # Empty
+    
     # Arrange the positions of widgets by listing them in the desired order
     self.wb_list_2 = [[but_load_new, rg_load],
-                      div2,
+                      div_space_1,
                       [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
                       [sl_vals_max, sl_comb],
                       [div_vals, div_classifs],
-                      [cg_vals_col, cg_classifs_col],
-                      widgetbox(div4, self.ti_alert)]
+                      [cg_vals_col, cg_classifs_col]]
 
     return
 
@@ -850,7 +826,7 @@ def update_vals_active(attr, old, new, DatEx):
 
     if len(new) > DatEx.vals_max:
         message = 'Maximum of '+str(DatEx.vals_max)+' value columns exceeded.'
-        DatEx.show_info(message)
+        show_info(message)
         if not len(old) > DatEx.vals_max:  # Prevent infinite loop
             DatEx.cg_vals.active = old  # Reset selection to old state
         return
@@ -886,7 +862,7 @@ def update_classifs_active(attr, old, new, DatEx):
 
     if len(new) == 0:
         message = 'Please select at least one classification.'
-        DatEx.show_info(message)
+        show_info(message)
         DatEx.cg_classifs.active = old  # Reset selection to old state
         return
     else:
@@ -1198,7 +1174,7 @@ def load_file(filepath, DatEx):
             raise NotImplementedError('Unsupported file extension: '+filetype)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up message box:
-        DatEx.show_info('File not loaded: '+filepath+' \n'+str(ex))
+        show_info('Error: File not loaded: '+filepath+' \n'+str(ex))
         return  # Return, instead of completing the function
 
     logging.debug('Loaded ' + filepath)
@@ -1232,6 +1208,26 @@ def load_file(filepath, DatEx):
     '''Start the recreation of the UI by creating a new Dataexplorer object'''
     DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
     # (The script is basically restarted at this point)
+
+
+def show_info(message):
+    '''Shows a notification window with given message in the browser.
+    A TextInput widget is used to execute JavaScript code that shows a pop-up.
+    This widget is added, used and immediately removed from the document.
+
+    Args:
+        message (str) : Message text.
+
+    Return:
+        None
+    '''    
+    ti_alert = TextInput(value='')
+    ti_alert.js_on_change('value', CustomJS(code='''alert(cb_obj.value)'''))
+    curdoc().add_root(ti_alert)
+    ti_alert.value = message
+    curdoc().remove_root(ti_alert)
+
+    logging.critical(message)  # Output to log with priority 'critical'
 
 
 def export_figs(DatEx, fig_sel=None, ftype='.png'):
