@@ -39,7 +39,6 @@ TODO: Transfer session settings via DatEx.__dict__
 
 Known issues:
 - Plots fail when Time column includes 'NaT', so those columns are removed
-- Warning pop-up messages cannot be shown while the page is created
 
 '''
 
@@ -534,7 +533,7 @@ def create_widgets_2(self):
 
     # Spacer
     div_space_1 = Div(text='''<div> </div>''', height=8, width=600)  # Empty
-    
+
     # Arrange the positions of widgets by listing them in the desired order
     self.wb_list_2 = [[but_load_new, rg_load],
                       div_space_1,
@@ -1220,7 +1219,7 @@ def show_info(message):
 
     Return:
         None
-    '''    
+    '''
     ti_alert = TextInput(value='')
     ti_alert.js_on_change('value', CustomJS(code='''alert(cb_obj.value)'''))
     curdoc().add_root(ti_alert)
@@ -1228,6 +1227,44 @@ def show_info(message):
     curdoc().remove_root(ti_alert)
 
     logging.critical(message)  # Output to log with priority 'critical'
+
+
+def update_nav_confirm(active):
+    '''Enable or disable the browser's 'leave page' confirmation dialog.
+
+    Args:
+        active (bool): State of the toggle button
+
+    Returns:
+        None
+    '''
+    if active:
+        js_code = '''window.onbeforeunload = function() {
+                        return true;
+                        };
+                  '''
+    else:
+        js_code = '''window.onbeforeunload = null;'''
+
+    run_js_code(js_code)
+
+
+def run_js_code(js_code):
+    '''Shows a notification window with given message in the browser.
+    A TextInput widget is used to execute JavaScript code that shows a pop-up.
+    This widget is added, used and immediately removed from the document.
+
+    Args:
+        js_code (str) : JavaScript code to be executed.
+
+    Return:
+        None
+    '''
+    ti_code = TextInput(value='')
+    ti_code.js_on_change('value', CustomJS(code=js_code))
+    curdoc().add_root(ti_code)
+    ti_code.value = ' '
+    curdoc().remove_root(ti_code)
 
 
 def export_figs(DatEx, fig_sel=None, ftype='.png'):
