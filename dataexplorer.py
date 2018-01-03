@@ -1210,9 +1210,8 @@ def load_file(filepath, DatEx):
 
 
 def show_info(message):
-    '''Shows a notification window with given message in the browser.
-    A TextInput widget is used to execute JavaScript code that shows a pop-up.
-    This widget is added, used and immediately removed from the document.
+    '''Shows a notification window with the given message in the browser.
+    Use the browsers 'alert()' JavaScript code that shows a pop-up.
 
     Args:
         message (str) : Message text.
@@ -1220,11 +1219,9 @@ def show_info(message):
     Return:
         None
     '''
-    ti_alert = TextInput(value='')
-    ti_alert.js_on_change('value', CustomJS(code='''alert(cb_obj.value)'''))
-    curdoc().add_root(ti_alert)
-    ti_alert.value = message
-    curdoc().remove_root(ti_alert)
+    message = message.replace("'","")  # Message cannot contain: '
+    js_code="""alert('"""+message+"""')"""
+    run_js_code(js_code)
 
     logging.critical(message)  # Output to log with priority 'critical'
 
@@ -1250,9 +1247,9 @@ def update_nav_confirm(active):
 
 
 def run_js_code(js_code):
-    '''Shows a notification window with given message in the browser.
-    A TextInput widget is used to execute JavaScript code that shows a pop-up.
-    This widget is added, used and immediately removed from the document.
+    '''Run arbitrary JavaScript code anytime.
+    A TextInput widget is used to execute the JavaScript code. This widget is
+    added, used and then immediately removed from the document.
 
     Args:
         js_code (str) : JavaScript code to be executed.
