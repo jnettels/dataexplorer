@@ -77,12 +77,12 @@ pd.set_option('display.expand_frame_repr', False)
 # Check some version requirements
 pd_v_required = '0.21.0'
 if StrictVersion(pd.__version__) < StrictVersion(pd_v_required):
-    logging.critical('Warning: Pandas version '+pd_v_required+' is required. ' +
-                    'Your version is '+pd.__version__)
+    logging.critical('Warning: Pandas version '+pd_v_required+' is required.' +
+                     ' Your version is '+pd.__version__)
 bk_v_required = '0.12.13'
 if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
-    logging.critical('Warning: Bokeh version '+bk_v_required+' is required. ' +
-                    'Your version is '+bokeh.__version__)
+    logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
+                     ' Your version is '+bokeh.__version__)
 
 
 class Dataexplorer(object):
@@ -187,7 +187,7 @@ def analyse_dataframe(self):
               pd.NaT in df[column_].tolist():
                 # 'Not a Time' in a time column makes the plots not render
                 # properly, so we need to sort those columns out
-                show_info('Warning: Column "'+column_+'" removed from '+
+                show_info('Warning: Column "'+column_+'" removed from ' +
                           'data, because of missing entries.')
                 df.drop(columns=[column_], inplace=True)
             else:
@@ -464,7 +464,6 @@ def create_widgets_2(self):
         None
     '''
 
-
     # Button: Upload new file
     save_path = os.path.join(os.path.dirname(__file__), 'upload')
     if not os.path.exists(save_path):
@@ -640,7 +639,13 @@ def create_layout(self):
 
     curdoc().clear()  # Clear any previous document roots
     curdoc().add_root(tabs)  # Add a new root to the document
-    curdoc().title = 'DataExplorer: '+self.data_name
+    curdoc().title = 'DataExplorer: '+self.data_name  # Set browser title
+
+    # Things to when not in a debugging mode:
+    if logging.getLogger().getEffectiveLevel() == logging.CRITICAL:
+        # Activate 'leave page' confirmation dialog after a certain time
+        curdoc().add_timeout_callback(partial(update_nav_confirm, active=True),
+                                      timeout_milliseconds=2*60*1000)
 
 #    table_old = curdoc().roots[0].tabs[1].child
 #    print(table_old)
@@ -796,10 +801,10 @@ def update_colours(DatEx):
         None
 
     '''
-    colourmap = get_colourmap(DatEx.classes_dict[DatEx.colour_classif])
+    colormap = get_colourmap(DatEx.classes_dict[DatEx.colour_classif])
     DatEx.df.sort_values(by=[DatEx.colour_classif], inplace=True)
     DatEx.df['Legend'] = DatEx.df[DatEx.colour_classif]
-    DatEx.df['Colours'] = [colourmap[x] for x in DatEx.df[DatEx.colour_classif]]
+    DatEx.df['Colours'] = [colormap[x] for x in DatEx.df[DatEx.colour_classif]]
 
     return
 
@@ -1219,8 +1224,8 @@ def show_info(message):
     Return:
         None
     '''
-    message = message.replace("'","")  # Message cannot contain: '
-    js_code="""alert('"""+message+"""')"""
+    message = message.replace("'", "")  # Message cannot contain: '
+    js_code = """alert('"""+message+"""')"""
     run_js_code(js_code)
 
     logging.critical(message)  # Output to log with priority 'critical'
@@ -1244,6 +1249,7 @@ def update_nav_confirm(active):
         js_code = '''window.onbeforeunload = null;'''
 
     run_js_code(js_code)
+    logging.critical('nav_confirm is now '+str(active))
 
 
 def run_js_code(js_code):
