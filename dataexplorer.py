@@ -725,6 +725,12 @@ def update_filters(active, caller, DatEx):
         filter_combined = filter_combined & filter_i
     DatEx.filter_combined = filter_combined
 
+    # Selections would get messed up after the filtering.
+    # Force 'empty' selection of rows = unselect everything.
+    DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
+                             '1d': {'indices': []},
+                             '2d': {'indices': {}}}
+
     update_CDS(DatEx)  # Update ColumnDataSource to apply the filter_combined
 
     # The 'view' function seemed useful, but may not be flexible enough:
@@ -743,6 +749,12 @@ def update_CDS(DatEx):
     '''Update the ColumnDataSource object from the Pandas DataFrame while
     applying the 'filter_combined'.
 
+    Due to the sorting of DataFrame df in update_colours(), the user's
+    selection of rows will become corrupted when we update the ColumnDataSource
+    from the differently indexed DataFrame df. This is corrected by finding the
+    selected rows from the old index in the new index and updating the
+    selection accordingly.
+
     Args:
         DatEx (Dataexplorer): The object containing all the session information
 
@@ -753,12 +765,38 @@ def update_CDS(DatEx):
     # Thus the order of filter_combined and the df have to be matched
     DatEx.filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
 
+    # Here we correct the row selection. First we get the current selection
+    source_index_sel_old = DatEx.source.selected['1d']['indices']
+
+    if source_index_sel_old == []:
+        source_index_sel_new = []  # No seletion found, skip the rest
+    else:
+        # Get indizes of old selection in index of previous df
+        df_index_sel_old = DatEx.df_index_last[source_index_sel_old].values
+        # Get index of current df
+        df_index = list(DatEx.df[DatEx.filter_combined_ri].index.values)
+        # Find the new selection by matching the indizes
+        source_index_sel_new = [df_index.index(i) for i in df_index_sel_old]
+
+        # Make selection empty (All glyphs vanish for a moment. Otherwise
+        # on updating 'source' the wrong glyphs are selected for a moment.)
+        DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
+                                 '1d': {'indices': [[]]},
+                                 '2d': {'indices': {}}}
+
     # Update the 'data' property of the 'source' object with the new data.
     # The new data is formatted with Pandas as a dict of the 'list' type.
     DatEx.source.data = DatEx.df[DatEx.filter_combined_ri].to_dict('list')
     # Bokeh detects changes to the 'source' automatically and updates the
     # figures, glyphs and DataTable accordingly.
-    # After this step the script is idle until the next user input occurs.
+
+    # Set new row selection
+    if source_index_sel_new != []:
+        DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
+                                 '1d': {'indices': source_index_sel_new},
+                                 '2d': {'indices': {}}}
+
+    '''After this step the script is idle until the next user input occurs.'''
 
 
 def update_colour_classif(attr, old, new, DatEx):
@@ -801,6 +839,12 @@ def update_colours(DatEx):
         None
 
     '''
+    try:  # Store index before sorting
+        DatEx.df_index_last = DatEx.df[DatEx.filter_combined_ri].index
+    except Exception:  # filter_combined_ri may not exist yet
+        DatEx.df_index_last = DatEx.df.index
+
+    # Now sort df and update/create columns
     colormap = get_colourmap(DatEx.classes_dict[DatEx.colour_classif])
     DatEx.df.sort_values(by=[DatEx.colour_classif], inplace=True)
     DatEx.df['Legend'] = DatEx.df[DatEx.colour_classif]
