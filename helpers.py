@@ -119,7 +119,7 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
         save_path (str) : Destination for the uploaded file.
 
         callback (func) : External function that is called on button press.
-        
+
         DatEx (Dataexplorer): The object containing all the session information
 
         label (str, optional) : Button label text.
@@ -155,6 +155,32 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
 
     # Connect the JavaScript code with the widget
     button.callback = CustomJS(args=dict(source=source), code=code_upload)
+
+    return button
+
+
+def new_download_button(DatEx, label='Download current data'):
+    # TODO Remove seperator from column names
+    # TODO Move a time column to the first position
+    filename = 'DataExplorer_Download.csv'
+    filetext = DatEx.df.to_csv(sep=';',
+                               columns=DatEx.classifs_active+DatEx.vals_active,
+                               index=False,
+                               )
+    filetype = 'text/csv;charset=utf-8;'
+
+    source = ColumnDataSource({'filename': [filename],
+                               'filetext': [filetext],
+                               'filetype': [filetype],
+                               })
+
+    # Create the button with the connected JavaScript code callback
+    button = Button(label=label, button_type="success")
+    # The JavaScript magic is in this file
+    f_path = os.path.join(os.path.dirname(__file__), 'models', 'download.js')
+    with open(f_path, 'r') as f:
+        code_download = f.read()
+    button.callback = CustomJS(args=dict(source=source), code=code_download)
 
     return button
 

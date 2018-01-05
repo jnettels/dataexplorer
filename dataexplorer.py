@@ -69,7 +69,7 @@ from distutils.version import StrictVersion
 
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
-                     read_csv_formats)
+                     read_csv_formats, new_download_button)
 
 # Global Pandas option for displaying terminal output
 pd.set_option('display.expand_frame_repr', False)
@@ -471,6 +471,9 @@ def create_widgets_2(self):
     but_load_new = new_upload_button(save_path, load_file, self,
                                      label='Upload a new file to the server')
 
+    # Button: Download the current data as a file
+    but_download = new_download_button(self)
+
     # RadioGroup: Replace or append current data with new file
     rg_load = RadioGroup(labels=['Replace current data with new file',
                                  'Append new file to current data'],
@@ -534,7 +537,7 @@ def create_widgets_2(self):
     div_space_1 = Div(text='''<div> </div>''', height=8, width=600)  # Empty
 
     # Arrange the positions of widgets by listing them in the desired order
-    self.wb_list_2 = [[but_load_new, rg_load],
+    self.wb_list_2 = [[but_load_new, rg_load, but_download],
                       div_space_1,
                       [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
                       [sl_vals_max, sl_comb],
