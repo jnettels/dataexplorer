@@ -561,6 +561,7 @@ def create_data_table(self):
                            width=1850,
                            height=800,
                            scroll_to_selection=False,
+                           reorderable=False,  # Reordering is not supported!
                            sortable=True,  # editable=True,
                            )
     self.data_table = data_table
