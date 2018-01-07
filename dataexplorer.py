@@ -155,7 +155,7 @@ class Dataexplorer(object):
         create_data_table(self)
 
         # Create a correlation coefficient matrix plot
-        create_corr_matrix(self)
+        create_corr_matrix_heatmap(self)
 
         # Create a Bokeh "layout" from the widgets and grid of figures
         create_layout(self)
@@ -611,7 +611,7 @@ def create_data_table_columns(self):
     return self.dt_columns
 
 
-def create_corr_matrix(self):
+def create_corr_matrix_heatmap(self):
     '''Create a matrix plot containing the correlation coefficients of the
     active value columns. The applied filters are taken into account.
 
@@ -619,13 +619,13 @@ def create_corr_matrix(self):
         self (Dataexplorer): The object containing all the session information
 
     Returns:
-        corr_matrix (figure): A Bokeh figure containing the rectangle plot
+        corr_matrix_heatmap (figure): A Bokeh figure with a rectangle plot
     '''
     corr_matrix = self.df[self.filter_combined_ri][self.vals_active].corr(
             method='pearson')
 
-    self.corr_matrix = create_heatmap(corr_matrix)
-    return self.corr_matrix
+    self.corr_matrix_heatmap = create_heatmap(corr_matrix)
+    return self.corr_matrix_heatmap
 
 
 def create_layout(self):
@@ -647,7 +647,7 @@ def create_layout(self):
     '''
     layout_1 = layout([self.wb_list_1, self.legend_top, self.grid])
     layout_2 = layout(self.data_table)
-    layout_3 = layout(self.corr_matrix)
+    layout_3 = layout(self.corr_matrix_heatmap)
     layout_4 = layout(self.wb_list_2)
 
     tab_1 = Panel(child=layout_1, title='Scatters')
@@ -1104,7 +1104,7 @@ def callback_tabs(attr, old, new, DatEx):
 
     elif new == 2:  # Third tab
         if (DatEx.corr_matrix_needs_update):
-            update_corr_matrix(DatEx)
+            update_corr_matrix_heatmap(DatEx)
             DatEx.corr_matrix_needs_update = False
 
     elif new == 3:  # Fourth tab
@@ -1169,7 +1169,7 @@ def update_table(DatEx):
     DatEx.data_table.columns = DatEx.dt_columns
 
 
-def update_corr_matrix(DatEx):
+def update_corr_matrix_heatmap(DatEx):
     '''Update the correlation matrix figure in the 'Correlation' tab.
 
     Args:
@@ -1180,8 +1180,8 @@ def update_corr_matrix(DatEx):
     '''
     layout_3 = curdoc().roots[0].tabs[2].child
     # The children of a layout can be treated like a list:
-    layout_3.children.remove(DatEx.corr_matrix)
-    layout_3.children.append(create_corr_matrix(DatEx))
+    layout_3.children.remove(DatEx.corr_matrix_heatmap)
+    layout_3.children.append(create_corr_matrix_heatmap(DatEx))
 
 
 def get_colourmap(classes):
