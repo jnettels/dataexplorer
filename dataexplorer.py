@@ -160,6 +160,17 @@ class Dataexplorer(object):
         # Create a Bokeh "layout" from the widgets and grid of figures
         create_layout(self)
 
+    def get_columns_sorted(self):
+        # If a time column exists, it should be the first column in DataTable
+        if self.col_time is not None:
+            vals_wo_time = self.vals_active.copy()
+            vals_wo_time.remove(self.col_time)
+            columns = [self.col_time] + self.classifs_active + vals_wo_time
+        else:
+            columns = self.classifs_active + self.vals_active
+
+        return columns
+
 
 def analyse_dataframe(self):
     '''Analyse a given DataFrame to separate the columns in classes and
@@ -178,18 +189,22 @@ def analyse_dataframe(self):
     columns = df.columns.values.tolist()
     classifs = []  # List of the classifications (columns that contain classes)
     vals = []  # List of the column names that contain values
+    self.col_time = None
     for column_ in columns:
         # The column contains classes or values
         if df[column_].dtype == object or is_categorical_dtype(df[column_]):
             classifs.append(column_)  # Classification found
         else:
-            if df[column_].dtype == 'datetime64[ns]' and \
-              pd.NaT in df[column_].tolist():
-                # 'Not a Time' in a time column makes the plots not render
-                # properly, so we need to sort those columns out
-                show_info('Warning: Column "'+column_+'" removed from ' +
-                          'data, because of missing entries.')
-                df.drop(columns=[column_], inplace=True)
+            if df[column_].dtype == 'datetime64[ns]':
+                if pd.NaT in df[column_].tolist():
+                    # 'Not a Time' in a time column makes the plots not render
+                    # properly, so we need to sort those columns out
+                    show_info('Warning: Column "'+column_+'" removed from ' +
+                              'data, because of missing entries.')
+                    df.drop(columns=[column_], inplace=True)
+                else:
+                    self.col_time = column_  # Save column as time column
+                    vals.append(column_)  # Value column found
             else:
                 vals.append(column_)  # Value column found
 
@@ -564,8 +579,9 @@ def create_data_table(self):
                            width=1850,
                            height=800,
                            scroll_to_selection=False,
+                           sortable=True,
                            reorderable=False,  # Reordering is not supported!
-                           sortable=True,  # editable=True,
+                           editable=False,  # Editing is not supported!
                            )
     self.data_table = data_table
     return self.data_table
@@ -584,12 +600,12 @@ def create_data_table_columns(self):
     '''
     self.dt_columns = []
 
-    for name in self.classifs_active + self.vals_active:
-        if self.df[name].dtype == 'datetime64[ns]':
-            dt_column = TableColumn(field=name, title=name,
+    for column_ in self.get_columns_sorted():
+        if self.df[column_].dtype == 'datetime64[ns]':
+            dt_column = TableColumn(field=column_, title=column_,
                                     formatter=DateFormatter())
         else:
-            dt_column = TableColumn(field=name, title=name)
+            dt_column = TableColumn(field=column_, title=column_)
         self.dt_columns.append(dt_column)
 
     return self.dt_columns
@@ -730,7 +746,7 @@ def update_filters(active, caller, DatEx):
     DatEx.filter_combined = filter_combined
 
     # Selections would get messed up after the filtering.
-    # Force 'empty' selection of rows = unselect everything.
+    # Force 'empty' selection of rows = deselect everything.
     DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
                              '1d': {'indices': []},
                              '2d': {'indices': {}}}
@@ -773,13 +789,13 @@ def update_CDS(DatEx):
     source_index_sel_old = DatEx.source.selected['1d']['indices']
 
     if source_index_sel_old == []:
-        source_index_sel_new = []  # No seletion found, skip the rest
+        source_index_sel_new = []  # No selection found, skip the rest
     else:
-        # Get indizes of old selection in index of previous df
+        # Get indices of old selection in index of previous df
         df_index_sel_old = DatEx.df_index_last[source_index_sel_old].values
         # Get index of current df
         df_index = list(DatEx.df[DatEx.filter_combined_ri].index.values)
-        # Find the new selection by matching the indizes
+        # Find the new selection by matching the indices
         source_index_sel_new = [df_index.index(i) for i in df_index_sel_old]
 
         # Make selection empty (All glyphs vanish for a moment. Otherwise
@@ -1091,6 +1107,12 @@ def callback_tabs(attr, old, new, DatEx):
             update_corr_matrix(DatEx)
             DatEx.corr_matrix_needs_update = False
 
+    elif new == 3:  # Fourth tab
+        # Update the callback of the existing download_button with a new one
+        callback_updated = new_download_button(DatEx).callback
+        curdoc().set_select(selector={'name': 'download_button'},
+                            updates={'callback': callback_updated})
+
 
 def update_gridplot(DatEx):
     '''Update the gridplot in the 'Scatters' tab.
@@ -1325,7 +1347,7 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
         DatEx (Dataexplorer) : The Dataexplorer object.
 
         fig_sel (figure, optional) : A Bokeh figure. If None, all figures are
-            exportet.
+            exported.
 
         ftype (str, optional) : A string defining the file type extension.
 

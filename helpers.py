@@ -109,8 +109,8 @@ def create_test_data():
 
 
 def new_upload_button(save_path, callback, DatEx, label="Upload file"):
-    '''
-    A button widget that implements a special javascript callback function.
+    '''Return a upload button widget that implements a special JavaScript
+    callback function.
     This callback function makes the browser open a file dialog and allows
     the user to select a file, which is then uploaded to the folder 'save_path'
     on the server.
@@ -160,13 +160,33 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
 
 
 def new_download_button(DatEx, label='Download current data'):
-    # TODO Remove seperator from column names
-    # TODO Move a time column to the first position
+    '''Return a download button widget that implements a special JavaScript
+    callback function.
+    This callback function makes the browser open a file dialog and allows
+    the user to download the currently selected data as a .csv file.
+
+    TODO (Maybe) Remove separator from column names
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+        label (str, optional) : Button label text.
+
+    Return:
+        button (widget) : Bokeh widget object, to be placed in a layout.
+
+    '''
+    sel = DatEx.source.selected['1d']['indices']
+    if sel == []:
+        df_sel = DatEx.df
+    else:
+        df_sel = DatEx.df.iloc[sel]
+
     filename = 'DataExplorer_Download.csv'
-    filetext = DatEx.df.to_csv(sep=';',
-                               columns=DatEx.classifs_active+DatEx.vals_active,
-                               index=False,
-                               )
+    filetext = df_sel.to_csv(sep=';',
+                             columns=DatEx.get_columns_sorted(),
+                             index=False,
+                             )
     filetype = 'text/csv;charset=utf-8;'
 
     source = ColumnDataSource({'filename': [filename],
@@ -175,7 +195,7 @@ def new_download_button(DatEx, label='Download current data'):
                                })
 
     # Create the button with the connected JavaScript code callback
-    button = Button(label=label, button_type="success")
+    button = Button(label=label, button_type="success", name='download_button')
     # The JavaScript magic is in this file
     f_path = os.path.join(os.path.dirname(__file__), 'models', 'download.js')
     with open(f_path, 'r') as f:
@@ -186,8 +206,7 @@ def new_download_button(DatEx, label='Download current data'):
 
 
 def create_heatmap(corr_matrix):
-    '''
-    Create and return a heatmap plot for a given correlation matrix.
+    '''Create and return a heatmap plot for a given correlation matrix.
 
     Args:
         corr_matrx (DataFrame) : A Pandas DataFrame produced by df.corr()
