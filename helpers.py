@@ -159,7 +159,7 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
     return button
 
 
-def new_download_button(DatEx, label='Download current data'):
+def new_download_button(DatEx, label='Download current data selection'):
     '''Return a download button widget that implements a special JavaScript
     callback function.
     This callback function makes the browser open a file dialog and allows
