@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Created on Fri Nov  3 08:10:21 2017
+@version: 0.10
 
 @author: Joris Nettelstroth
 
@@ -14,12 +14,13 @@ a Bokeh server that can be accessed from any computer in the network.
 Alternatively, you can start it with your own command prompt in Windows:
     - Go to Start and type "cmd"
     - Select "Eingabeaufforderung"
-    - Change directory to the folder containing the script by typing
+    - Change to the directory containing the folder "dataexplorer" (the folder
+      including the files "main.py" and "dataexplorer.py") with the command:
       "cd path/to/folder"
-    - Start a Bokeh server running this script by typing
-      "bokeh serve dataexplorer.py --show"
+    - Start a Bokeh server running this application by typing:
+      "bokeh serve dataexplorer --show"
     - Your webbrowser should open and display the interface of the program
-    - Hit the button to load your own Excel file
+    - Under settings, hit the button to load your own Excel file
 
 The file excel_example.xlsx shows the required input format and gives hints
 about the usage.
@@ -27,7 +28,7 @@ about the usage.
 If you do not yet have Python and Bokeh installed, the easiest way to do that
 is by downloading and installing "Anaconda" from here:
 https://www.anaconda.com/download/
-Its a package manager that distributes Python with data science packages.
+It's a package manager that distributes Python with data science packages.
 
 During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
@@ -36,6 +37,7 @@ is required for the batch file to work.
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
 TODO: Transfer session settings via DatEx.__dict__
+TODO: Make combinator generator a single choice list
 
 Known issues:
 - Plots fail when Time column includes 'NaT', so those columns are removed
@@ -98,7 +100,7 @@ class Dataexplorer(object):
     new object to make them survive the switch of sessions.
     '''
 
-    def __init__(self, df, filepath, data_name, combinator=1, vals_max=6):
+    def __init__(self, df, data_name, combinator=1, vals_max=6):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -106,8 +108,6 @@ class Dataexplorer(object):
 
         Args:
             df (Pandas DataFrame) : The input data we want to explore.
-
-            filepath (str) : Path to file to load.
 
             data_name (str) : The filename of the current data set.
 
@@ -120,7 +120,6 @@ class Dataexplorer(object):
         '''
         self.df = df
         self.vals_max = vals_max  # Threshold for number of value columns
-        self.filepath = filepath
         self.data_name = data_name
         self.combinator = combinator  # Identifier for combinatoric generator
         self.grid_needs_update = False
@@ -1382,7 +1381,5 @@ if __name__ == "__main__":
     '''
     df = create_test_data()
     data_name = 'Example Data'
-    filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
-               '\excel_text.xlsx'
 
-    Dataexplorer(df, filepath, data_name)
+    Dataexplorer(df, data_name)

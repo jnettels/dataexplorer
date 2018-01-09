@@ -20,9 +20,7 @@ from dataexplorer import Dataexplorer
 
 df = create_test_data()
 data_name = 'Example Data'
-filepath = r'\\igs-srv\transfer\Joris_Nettelstroth\Python\DataExplorer' + \
-           '\excel_text.xlsx'
 
-DatEx = Dataexplorer(df, filepath, data_name)
+DatEx = Dataexplorer(df, data_name)
 
 # The script ends here (but Bokeh keeps waiting for user input)
