@@ -15,12 +15,32 @@ We create an initial set of example data and then create the
 DataExplorer user interface.
 '''
 
-from helpers import create_test_data
+from optparse import OptionParser  # For parsing options with the program call
 from dataexplorer import Dataexplorer
+from helpers import create_test_data, read_filetypes
 
-df = create_test_data()
-data_name = 'Example Data'
+# Read the user input:
+parser = OptionParser()
+parser.add_option('-f', '--file', action='store', type='string',
+                  dest='file_path',
+                  help='Path to the file to load.',
+                  default=None)
 
-DatEx = Dataexplorer(df, data_name)
+parser.add_option('-n', '--name', action='store', type='string',
+                  dest='data_name',
+                  help='Name of the loaded data; default = %default',
+                  default='Example Data')
+
+options, args = parser.parse_args()
+
+if options.file_path is not None:
+    try:
+        df = read_filetypes(options.file_path)
+    except Exception:
+        raise  # Reraise the current exception
+else:
+    df = create_test_data()
+
+DatEx = Dataexplorer(df, options.data_name)
 
 # The script ends here (but Bokeh keeps waiting for user input)

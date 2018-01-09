@@ -71,7 +71,7 @@ from distutils.version import StrictVersion
 
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
-                     read_csv_formats, new_download_button)
+                     read_filetypes, read_csv_formats, new_download_button)
 
 # Global Pandas option for displaying terminal output
 pd.set_option('display.expand_frame_repr', False)
@@ -1236,15 +1236,7 @@ def load_file(filepath, DatEx):
 
     logging.info('Trying to open file: ' + filepath)
     try:
-        filetype = os.path.splitext(os.path.basename(filepath))[1]
-        if filetype in ['.xlsx', '.xls']:
-            # Excel can be read automatically
-            df_new = pd.read_excel(filepath)  # Pandas function
-        elif filetype in ['.csv']:
-            # csv files can have different formats
-            df_new = read_csv_formats(filepath)  # My own wrapper around Pandas
-        else:
-            raise NotImplementedError('Unsupported file extension: '+filetype)
+        df_new = read_filetypes(filepath)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up message box:
         show_info('Error: File not loaded: '+filepath+' \n'+str(ex))
@@ -1279,7 +1271,7 @@ def load_file(filepath, DatEx):
     combinator_last = DatEx.combinator
 
     '''Start the recreation of the UI by creating a new Dataexplorer object'''
-    DatEx = Dataexplorer(df, filepath, data_name, combinator=combinator_last)
+    DatEx = Dataexplorer(df, data_name, combinator=combinator_last)
     # (The script is basically restarted at this point)
 
 

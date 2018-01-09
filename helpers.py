@@ -268,6 +268,23 @@ def create_heatmap(corr_matrix):
     return p
 
 
+def read_filetypes(filepath):
+    '''Read any file type with stored data and return the Pandas DataFrame.
+    Wrapper around Pandas' read_excel() and the local read_csv_formats().
+    '''
+    filetype = os.path.splitext(os.path.basename(filepath))[1]
+    if filetype in ['.xlsx', '.xls']:
+        # Excel can be read automatically
+        df_new = pd.read_excel(filepath)  # Pandas function
+    elif filetype in ['.csv']:
+        # csv files can have different formats
+        df_new = read_csv_formats(filepath)  # My own wrapper around Pandas
+    else:
+        raise NotImplementedError('Unsupported file extension: '+filetype)
+
+    return df_new
+
+
 def read_csv_formats(filepath):
     ''' Read a csv file and return a Pandas DataFrame. This is a wrapper
     around Pandas' read_csv() where the format of the csv file is determined
