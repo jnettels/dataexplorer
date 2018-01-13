@@ -48,6 +48,7 @@ import pandas as pd
 import numpy as np
 import itertools
 import os
+import re
 import logging
 import bokeh
 from bokeh.layouts import widgetbox, gridplot, layout
@@ -71,7 +72,7 @@ from distutils.version import StrictVersion
 
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
-                     read_filetypes, read_csv_formats, new_download_button)
+                     read_filetypes, new_download_button)
 
 # Global Pandas option for displaying terminal output
 pd.set_option('display.expand_frame_repr', False)
@@ -1239,7 +1240,8 @@ def load_file(filepath, DatEx):
         df_new = read_filetypes(filepath)
     except Exception as ex:
         # Show the error message in the terminal and in a pop-up message box:
-        show_info('Error: File not loaded: '+filepath+' \n'+str(ex))
+        show_info('Error: File ' + os.path.basename(filepath) +
+                  ' not loaded. ' + str(ex))
         return  # Return, instead of completing the function
 
     logging.debug('Loaded ' + filepath)
@@ -1285,11 +1287,13 @@ def show_info(message):
     Return:
         None
     '''
-    message = message.replace("'", "")  # Message cannot contain: '
+    logging.critical(message)  # Output to log with priority 'critical'
+
+    message = re.sub(r'\\', r'\\\\', message)  # Replace '\' with '\\'
+    message = re.sub(r'\n', r'\\n', message)  # Replace 'newline' with '\\n'
+    message = re.sub("'", "", message)  # Message cannot contain: '
     js_code = """alert('"""+message+"""')"""
     run_js_code(js_code)
-
-    logging.critical(message)  # Output to log with priority 'critical'
 
 
 def update_nav_confirm(active):
