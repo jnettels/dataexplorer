@@ -304,11 +304,15 @@ def read_filetypes(filepath):
     '''
     filetype = os.path.splitext(os.path.basename(filepath))[1]
     if filetype in ['.xlsx', '.xls']:
-        # Excel can be read automatically
-        df_new = pd.read_excel(filepath)  # Pandas function
+        # Excel can be read automatically with Pandas
+        df_new = pd.read_excel(filepath)
     elif filetype in ['.csv']:
         # csv files can have different formats
         df_new = read_csv_formats(filepath)  # My own wrapper around Pandas
+    elif filetype in ['.dat', '.txt', '.out']:
+        logging.warning('Unsupported file extension: ' + filetype +
+                        '. Trying to read it like a csv file.')
+        df_new = read_csv_formats(filepath)
     else:
         raise NotImplementedError('Unsupported file extension: '+filetype)
 
