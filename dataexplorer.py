@@ -75,7 +75,8 @@ from helpers import (new_upload_button, create_test_data, create_heatmap,
                      read_filetypes, new_download_button)
 
 # Global Pandas option for displaying terminal output
-pd.set_option('display.expand_frame_repr', False)
+# pd.set_option('display.expand_frame_repr', False)
+pd.set_option('display.max_columns', 0)  # Fit number of columns to terminal
 
 # Check some version requirements
 pd_v_required = '0.21.0'
@@ -193,6 +194,12 @@ def analyse_dataframe(self):
     for column_ in columns:
         # The column contains classes or values
         if df[column_].dtype == object or is_categorical_dtype(df[column_]):
+            classifs.append(column_)  # Classification found
+        elif '!' in column_:
+            # column_new = column_.replace('!', '')
+            # df.rename(columns={column_: column_new}, inplace=True)
+            # column_ = column_new
+            df[column_] = list(map(str, df[column_]))
             classifs.append(column_)  # Classification found
         else:
             if df[column_].dtype == 'datetime64[ns]':
