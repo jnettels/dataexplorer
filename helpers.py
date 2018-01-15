@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 from bokeh.models import ColumnDataSource, CustomJS, HoverTool
 from bokeh.models import LinearColorMapper, BasicTicker, ColorBar
-from bokeh.models.widgets import Button
+from bokeh.models.widgets import Button, TextInput
+from bokeh.io import curdoc
 from bokeh import palettes
 from math import pi
 
@@ -203,6 +204,35 @@ def new_download_button(DatEx, label='Download current data selection'):
     button.callback = CustomJS(args=dict(source=source), code=code_download)
 
     return button
+
+
+def show_confirm_dialog(message):
+    '''Function for testing a confirmation dialog. The Python code does not
+    wait for the answer. Instead the source_callback is called when the choice
+    is made.
+    '''
+    def source_callback(attr, old, new):
+        '''Something meaningful needs to be put in here. Made call another
+        callback, as in new_download_button.
+        '''
+        choice = source.data['choice'][0]
+        curdoc().remove_root(ti_code)
+        print(choice)
+
+    source = ColumnDataSource({'message': [message], 'choice': [None]})
+    source.on_change('data', source_callback)
+
+    # The JavaScript magic is in this file
+    f_path = os.path.join(os.path.dirname(__file__), 'models', 'confirm.js')
+    with open(f_path, 'r') as f:
+        code_confirm = f.read()
+    ti_code = TextInput(value='')
+    ti_code.js_on_change('value', CustomJS(args=dict(source=source),
+                                           code=code_confirm))
+    curdoc().add_root(ti_code)
+    ti_code.value = ' '  # Trigger the JavaScript code
+
+    return
 
 
 def create_heatmap(corr_matrix):
