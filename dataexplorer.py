@@ -512,23 +512,20 @@ def create_widgets_2(self):
     rg_load.on_click(partial(update_load_mode, DatEx=self))
 
     # Toggle: Switch coordinate center lines on and off
-    tgl_coords = Toggle(label='Toggle coordinate center lines',
-                        active=True)
+    tgl_coords = Toggle(label='Toggle coordinate center lines', active=True)
     tgl_coords.on_click(partial(update_coords, DatEx=self))
 
     # Sliders: Sliders for various settings
-    sl_c_size = Slider(start=1, end=20, step=1,
-                       value=self.c_size,
+    sl_c_size = Slider(start=1, end=20, step=1, value=self.c_size,
+                       callback_policy='mouseup',  # Not working in 0.12.13
                        title='Set the size of the scatter points')
     sl_c_size.on_change('value', partial(update_c_size, DatEx=self))
 
-    sl_p_h = Slider(start=100, end=1000, step=10,
-                    value=self.p_h,
+    sl_p_h = Slider(start=100, end=1000, step=10, value=self.p_h,
                     title='Set the plot height in pixels')
     sl_p_h.on_change('value', partial(update_p_h, DatEx=self))
 
-    sl_p_w = Slider(start=100, end=1000, step=10,
-                    value=self.p_w,
+    sl_p_w = Slider(start=100, end=1000, step=10, value=self.p_w,
                     title='Set the plot width in pixels')
     sl_p_w.on_change('value', partial(update_p_w, DatEx=self))
 
@@ -545,9 +542,9 @@ def create_widgets_2(self):
 
     # CheckboxGroup: Two multiple choice selections for the used value columns
     # and classifications. The groups are wrapped in scrollable columns.
-    div_vals = Div(text='''<div style="position:relative; top:15px">
+    div_vals = Div(text='''<div style="position:relative; top:9px">
                    Select the value columns used in the plots:
-                   </div>''', height=25, width=600)
+                   </div>''', height=0, width=600)
     active_list = list(range(0, min(len(self.vals), self.vals_max)))
     cg_vals = CheckboxGroup(labels=self.vals, active=active_list)
     cg_vals.on_change('active', partial(update_vals_active, DatEx=self))
@@ -555,9 +552,9 @@ def create_widgets_2(self):
                          css_classes=['scrollable'])
     self.cg_vals = cg_vals
 
-    div_classifs = Div(text='''<div style="position:relative; top:15px">
+    div_classifs = Div(text='''<div style="position:relative; top:9px">
                        Select the classifications used in the plots:
-                       </div>''', height=25, width=600)
+                       </div>''', height=0, width=600)
     active_list = list(range(0, len(self.classifs)))
     cg_classifs = CheckboxGroup(labels=self.classifs, active=active_list)
     cg_classifs.on_change('active', partial(update_classifs_active,
