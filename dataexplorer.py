@@ -37,7 +37,6 @@ is required for the batch file to work.
 TODO: Fix axis ranges
 TODO: Highlight a plot (e.g. add red border) by clicking on it
 TODO: Transfer session settings via DatEx.__dict__
-TODO: Make combinator generator a single choice list
 
 Known issues:
 - Plots fail when Time column includes 'NaT', so those columns are removed
@@ -102,7 +101,7 @@ class Dataexplorer(object):
     new object to make them survive the switch of sessions.
     '''
 
-    def __init__(self, df, data_name, combinator=1, vals_max=6):
+    def __init__(self, df, data_name, combinator=0, vals_max=6):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -291,14 +290,12 @@ def create_plots(self):
                 'line_dash': 'dashed', 'line_width': 1}
 
     # A choice of combinatoric generators with descending number of results:
-    if self.combinator == 4:
-        combis = itertools.product(self.vals_active, repeat=2)
-    elif self.combinator == 3:
-        combis = itertools.combinations_with_replacement(self.vals_active, r=2)
-    elif self.combinator == 2:
-        combis = itertools.permutations(self.vals_active, r=2)
-    elif self.combinator == 1:
+    if self.combinator == 0:
         combis = itertools.combinations(self.vals_active, r=2)
+    elif self.combinator == 1:
+        combis = itertools.permutations(self.vals_active, r=2)
+    elif self.combinator == 2:
+        combis = itertools.product(self.vals_active, repeat=2)
 
     self.fig_list = []  # List with the complete figures
     self.glyph_list = []  # List of GlyphRenderers
@@ -383,9 +380,9 @@ def create_plots(self):
 
     # Get the number of grid columns from the rounded square root of number of
     # figures.
-    if self.combinator == 4:
+    if self.combinator == 2:
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))
-    elif self.combinator == 2:
+    elif self.combinator == 1:
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))-1
     else:
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
@@ -528,9 +525,11 @@ def create_widgets_2(self):
                          title='Set the maximum number of value columns')
     sl_vals_max.on_change('value', partial(update_vals_max, DatEx=self))
 
-    sl_comb = Slider(start=1, end=4, step=1, value=self.combinator,
-                     title='Set complexity of the combinatoric generator')
-    sl_comb.on_change('value', partial(update_combinator, DatEx=self))
+    # RadioGroup: Single choice list for combinator generator
+    rg_comb = RadioGroup(active=self.combinator, labels=['']*3, width=600)
+    rg_comb.on_change('active', partial(update_combinator, DatEx=self))
+    self.rg_comb = rg_comb
+    update_rg_comb(self)  # Set the actual label text of rg_comb
 
     # CheckboxGroup: Two multiple choice selections for the used value columns
     # and classifications. The groups are wrapped in scrollable columns.
@@ -562,7 +561,7 @@ def create_widgets_2(self):
     self.wb_list_2 = [[but_load_new, rg_load, but_download],
                       div_space_1,
                       [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
-                      [sl_vals_max, sl_comb],
+                      [sl_vals_max, rg_comb],
                       [div_vals, div_classifs],
                       [cg_vals_col, cg_classifs_col]]
 
@@ -880,6 +879,26 @@ def update_colours(DatEx):
     return
 
 
+def update_rg_comb(DatEx):
+    '''Update the labels of the RadioGroup rg_comb (the single choice selector
+    for the combinatoric generator) with the new number of plots.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
+    combis_0 = str(len(list(itertools.combinations(DatEx.vals_active, r=2))))
+    combis_1 = str(len(list(itertools.permutations(DatEx.vals_active, r=2))))
+    combis_2 = str(len(list(itertools.product(DatEx.vals_active, repeat=2))))
+
+    DatEx.rg_comb.labels = [
+        combis_0+' plots (No inverted plots)',
+        combis_1+' plots (With inverted plots)',
+        combis_2+' plots (Equivalent to full correlation coefficient matrix)']
+
+
 def update_vals_active(attr, old, new, DatEx):
     '''Function associated with value column selection widget 'cg_vals'.
     Updates the vals_active (setting of active value columns), or refuses the
@@ -905,8 +924,6 @@ def update_vals_active(attr, old, new, DatEx):
         if not len(old) > DatEx.vals_max:  # Prevent infinite loop
             DatEx.cg_vals.active = old  # Reset selection to old state
         return
-    elif len(new) < 2:
-        return
     else:
         # Translate the active button positions into chosen category strings:
         DatEx.vals_active = [DatEx.vals[j] for j in new]
@@ -914,6 +931,7 @@ def update_vals_active(attr, old, new, DatEx):
         DatEx.grid_needs_update = True
         DatEx.table_needs_update = True
         DatEx.corr_matrix_needs_update = True
+        update_rg_comb(DatEx)  # Update list of combinator generator selection
 
 
 def update_classifs_active(attr, old, new, DatEx):
