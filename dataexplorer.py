@@ -34,12 +34,24 @@ During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
-TODO: Fix axis ranges
-TODO: Highlight a plot (e.g. add red border) by clicking on it
-TODO: Transfer session settings via DatEx.__dict__
+TODO:
+    - Fix axis ranges
+    - Highlight a plot (e.g. add red border) by clicking on it
+    - Transfer session settings via DatEx.__dict__
 
 Known issues:
-- Plots fail when Time column includes 'NaT', so those columns are removed
+    - Plots fail when Time column includes 'NaT', so those columns are removed
+    - By default, there is a limit of about 8 MB of data upload to the
+      browser. This is controlled by the Tornado server, with the parameter
+      'websocket_max_message_size'.
+      In '\Anaconda3\Lib\site-packages\bokeh\server\tornado.py' go to line 221:
+      super(BokehTornado, self).__init__(all_patterns)
+
+      For 100 MB upload limit, replace it with:
+      super(BokehTornado, self).__init__(all_patterns,
+      websocket_max_message_size=100*1024*1024)
+
+      Also see: https://github.com/bokeh/bokeh/issues/7374
 
 '''
 
