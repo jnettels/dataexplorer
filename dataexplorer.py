@@ -143,6 +143,7 @@ class Dataexplorer(object):
         self.p_h = 250  # global setting for plot_height
         self.p_w = 250  # global setting for plot_width
         self.load_mode_append = 0  # 0 equals False equals replace
+        self.selected_figs = []
 
         # Set classifications, their classes and value column names
         try:
@@ -301,19 +302,13 @@ def create_plots(self):
     span_set = {'location': 0, 'line_color': 'grey',
                 'line_dash': 'dashed', 'line_width': 1}
 
-    # A choice of combinatoric generators with descending number of results:
-    if self.combinator == 0:
-        combis = itertools.combinations(self.vals_active, r=2)
-    elif self.combinator == 1:
-        combis = itertools.permutations(self.vals_active, r=2)
-    elif self.combinator == 2:
-        combis = itertools.product(self.vals_active, repeat=2)
+    self.selected_figs = get_combinations(self)
 
     self.fig_list = []  # List with the complete figures
     self.glyph_list = []  # List of GlyphRenderers
     self.span_list = []  # List of spans (coordinate center lines)
 
-    for x_val, y_val in combis:
+    for x_val, y_val in self.selected_figs:
         # Is x_axis or y_axis of data type 'datetime'?
         x_time = (self.df[x_val].dtype == 'datetime64[ns]')
         y_time = (self.df[y_val].dtype == 'datetime64[ns]')
@@ -636,10 +631,23 @@ def create_corr_matrix_heatmap(self):
     Returns:
         corr_matrix_heatmap (figure): A Bokeh figure with a rectangle plot
     '''
-    corr_matrix = self.df[self.filter_combined_ri][self.vals_active].corr(
-            method='pearson')
+    # Apply the filters
+    df_filtered = self.df[self.filter_combined_ri][self.vals_active]
+    # Convert the datetime column to seconds to allow calculating correlations
+    try:  # This will only work if there is a time column
+        df_filtered[self.col_time] = pd.to_timedelta(df_filtered['Time']
+                                                     ).astype('timedelta64[s]')
+    except Exception:
+        pass
+    # Calculate the correlation matrix
+    corr_matrix = df_filtered.corr(method='pearson')
+    # Call a custom function to create a heatmap figure
+    self.corr_matrix_heatmap = create_heatmap(corr_matrix, self)
+    # Update the selection immediately
+    update_hm_source_selected(self)
+    # Whenever the selection on the matrix changes, this callback happens
+    self.hm_source.on_change('selected', partial(callback_heatmap, DatEx=self))
 
-    self.corr_matrix_heatmap = create_heatmap(corr_matrix)
     return self.corr_matrix_heatmap
 
 
@@ -898,14 +906,18 @@ def update_rg_comb(DatEx):
     Returns:
         None
     '''
+    DatEx.rg_comb.active = DatEx.combinator
+
     combis_0 = str(len(list(itertools.combinations(DatEx.vals_active, r=2))))
     combis_1 = str(len(list(itertools.permutations(DatEx.vals_active, r=2))))
     combis_2 = str(len(list(itertools.product(DatEx.vals_active, repeat=2))))
+    combis_3 = str(len(DatEx.selected_figs))
 
     DatEx.rg_comb.labels = [
         combis_0+' plots (No inverted plots)',
         combis_1+' plots (With inverted plots)',
-        combis_2+' plots (Equivalent to full correlation coefficient matrix)']
+        combis_2+' plots (Equivalent to full correlation coefficient matrix)',
+        combis_3+' plots (Custom selection in "Correlation" tab)']
 
 
 def update_vals_active(attr, old, new, DatEx):
@@ -1090,7 +1102,7 @@ def update_vals_max(attr, old, new, DatEx):
 
 
 def update_combinator(attr, old, new, DatEx):
-    '''This function is triggered by the 'sl_comb' slider widget.
+    '''This function is triggered by the 'rg_comb' RadioGroup widget.
     The user input value 'new' is stored in the global variable combinator.
 
     Args:
@@ -1107,6 +1119,27 @@ def update_combinator(attr, old, new, DatEx):
     DatEx.grid_needs_update = True
 
 
+def update_hm_source_selected(DatEx):
+    '''Update the selection of the heatmap source. We create a Pandas Series
+    from the full list of possible selections. We filter it with the currently
+    selected figures. The result is a list of the indices that we can pass to
+    hm_source.selected.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
+    figs_all = list(itertools.product(DatEx.vals_active, repeat=2))
+    figs_all_s = pd.Series(range(len(figs_all)), index=figs_all)
+    figs_sel = get_combinations(DatEx)
+    DatEx.hm_sel_ids = figs_all_s[figs_sel].tolist()
+    DatEx.hm_source.selected = {'0d': {'glyph': None, 'indices': []},
+                                '1d': {'indices': DatEx.hm_sel_ids},
+                                '2d': {'indices': {}}}
+
+
 def callback_tabs(attr, old, new, DatEx):
     '''This function is triggered by selecting any of the tabs. Depending on
     the selected tab and the state of the *_needs_update flags, updates to
@@ -1117,7 +1150,9 @@ def callback_tabs(attr, old, new, DatEx):
 
         old (int): Previous user selection
 
-        new (int) : Number of selected tab.
+        new (int) : Number of selected tab
+
+        DatEx (Dataexplorer): The object containing all the session information
 
     Return:
         None
@@ -1141,11 +1176,48 @@ def callback_tabs(attr, old, new, DatEx):
             update_corr_matrix_heatmap(DatEx)
             DatEx.corr_matrix_needs_update = False
 
+        update_hm_source_selected(DatEx)
+
     elif new == 3:  # Fourth tab
+        update_rg_comb(DatEx)
+
         # Update the callback of the existing download_button with a new one
         callback_updated = new_download_button(DatEx).callback
         curdoc().set_select(selector={'name': 'download_button'},
                             updates={'callback': callback_updated})
+
+
+def callback_heatmap(attr, old, new, DatEx):
+    '''This function is triggered when the selection in the correlation
+    coefficient matrix heatmap changes.
+
+    Args:
+        attr (str): Calling widget's updated attribute
+
+        old (int): Previous user selection
+
+        new (int) : Updated selection
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Return:
+        None
+    '''
+    DatEx.hm_sel_ids = new['1d']['indices']
+    figs_all = pd.Series(list(itertools.product(DatEx.vals_active, repeat=2)))
+    if DatEx.hm_sel_ids == []:  # Happens when clicking the reset button
+        DatEx.selected_figs = figs_all
+        DatEx.combinator = 2  # Equals this combinator selection
+    else:
+        DatEx.selected_figs = figs_all[DatEx.hm_sel_ids]
+
+        # The combinator only needs to be updated if the selection does not
+        # match the current default selection scheme.
+        if DatEx.selected_figs.tolist() != get_combinations(DatEx):
+            DatEx.combinator = 3
+
+    # Set the required update flags:
+    DatEx.grid_needs_update = True
 
 
 def update_gridplot(DatEx):
@@ -1245,6 +1317,19 @@ def get_colourmap(classes):
         except Exception:
             colourmap[class_] = 'grey'
     return colourmap
+
+
+def get_combinations(DatEx):
+    # A choice of combinatoric generators with increasing number of results:
+    if DatEx.combinator == 0:
+        combis = itertools.combinations(DatEx.vals_active, r=2)
+    elif DatEx.combinator == 1:
+        combis = itertools.permutations(DatEx.vals_active, r=2)
+    elif DatEx.combinator == 2:
+        combis = itertools.product(DatEx.vals_active, repeat=2)
+    else:  # DatEx.combinator == 3
+        combis = DatEx.selected_figs
+    return list(combis)
 
 
 def load_file(filepath, DatEx):

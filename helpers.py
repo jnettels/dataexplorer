@@ -235,11 +235,13 @@ def show_confirm_dialog(message):
     return
 
 
-def create_heatmap(corr_matrix):
+def create_heatmap(corr_matrix, DatEx):
     '''Create and return a heatmap plot for a given correlation matrix.
 
     Args:
         corr_matrx (DataFrame) : A Pandas DataFrame produced by df.corr()
+
+        DatEx (Dataexplorer): The object containing all the session information
 
     Returns:
         p (figure) : A Bokeh figure containing the rectangle plot
@@ -249,7 +251,7 @@ def create_heatmap(corr_matrix):
     corr_matrix.index.names = ['x']
     corr_df = corr_matrix.reset_index().melt(id_vars='x', var_name='y',
                                              value_name='value')
-    source = ColumnDataSource(corr_df)
+    DatEx.hm_source = ColumnDataSource(corr_df)
 
     # Construct a colourmap by combining two existing palettes
     colours = palettes.viridis(20)[9:19]
@@ -262,7 +264,7 @@ def create_heatmap(corr_matrix):
                x_range=list(corr_matrix.columns),
                y_range=list(reversed(corr_matrix.columns)),
                x_axis_location='above', plot_width=800, plot_height=800,
-               tools='save, pan, box_zoom, reset, wheel_zoom',
+               tools='save, pan, box_zoom, reset, wheel_zoom, tap',
                toolbar_location='below', logo=None)
 
     p.grid.grid_line_color = None
@@ -274,7 +276,7 @@ def create_heatmap(corr_matrix):
 
     # Add the rectangle glyphs
     p.rect(x="x", y="y", width=1, height=1,
-           source=source,
+           source=DatEx.hm_source,
            fill_color={'field': 'value', 'transform': mapper},
            line_color=None)
 
