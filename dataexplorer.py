@@ -634,11 +634,9 @@ def create_corr_matrix_heatmap(self):
     # Apply the filters
     df_filtered = self.df[self.filter_combined_ri][self.vals_active]
     # Convert the datetime column to seconds to allow calculating correlations
-    try:  # This will only work if there is a time column
-        df_filtered[self.col_time] = pd.to_timedelta(df_filtered['Time']
+    if self.col_time is not None:  # This only works if there is a time column
+        df_filtered[self.col_time] = pd.to_timedelta(df_filtered[self.col_time]
                                                      ).astype('timedelta64[s]')
-    except Exception:
-        pass
     # Calculate the correlation matrix
     corr_matrix = df_filtered.corr(method='pearson')
     # Call a custom function to create a heatmap figure
