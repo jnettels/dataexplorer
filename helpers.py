@@ -264,7 +264,8 @@ def create_heatmap(corr_matrix, DatEx):
                x_range=list(corr_matrix.columns),
                y_range=list(reversed(corr_matrix.columns)),
                x_axis_location='above', plot_width=800, plot_height=800,
-               tools='save, pan, box_zoom, reset, wheel_zoom, tap',
+               tools='save, pan, wheel_zoom, box_zoom, reset, tap',
+               active_drag=None,
                toolbar_location='below', logo=None)
 
     p.grid.grid_line_color = None
