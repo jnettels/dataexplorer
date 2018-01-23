@@ -15,32 +15,36 @@ We create an initial set of example data and then create the
 DataExplorer user interface.
 '''
 
-from optparse import OptionParser  # For parsing options with the program call
+import argparse
 from dataexplorer import Dataexplorer
 from helpers import create_test_data, read_filetypes
 
 # Read the user input:
-parser = OptionParser()
-parser.add_option('-f', '--file', action='store', type='string',
-                  dest='file_path',
-                  help='Path to the file to load.',
-                  default=None)
+description = 'Main module of the DataExplorer application. Needs to be '\
+              'started by Bokeh and will not produce any output '\
+              'on its own. You can use the available options to automatically'\
+              ' load specify data. See the documentation for further help.'
+parser = argparse.ArgumentParser(description=description,
+                                 formatter_class=argparse.
+                                 ArgumentDefaultsHelpFormatter)
 
-parser.add_option('-n', '--name', action='store', type='string',
-                  dest='data_name',
-                  help='Name of the loaded data; default = %default',
-                  default='Example Data')
+parser.add_argument('-f', '--file', action='store', type=str,
+                    dest='file_path',
+                    help='Path to the file to load',
+                    default=None)
 
-options, args = parser.parse_args()
+parser.add_argument('-n', '--name', action='store', type=str,
+                    dest='data_name',
+                    help='Name of the loaded data',
+                    default='Example Data')
 
-if options.file_path is not None:
-    try:
-        df = read_filetypes(options.file_path)
-    except Exception:
-        raise  # Reraise the current exception
+args = parser.parse_args()
+
+if args.file_path is not None:
+    df = read_filetypes(args.file_path)
 else:
     df = create_test_data()
 
-DatEx = Dataexplorer(df, options.data_name)
+DatEx = Dataexplorer(df, args.data_name)
 
 # The script ends here (but Bokeh keeps waiting for user input)
