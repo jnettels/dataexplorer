@@ -10,5 +10,7 @@ loglevel="info"
 N=3  # Number of worker processes
 echo For remote access type $ip:$port/dataexplorer in remote browser
 nohup /home/pi/berryconda3/bin/bokeh serve /home/pi/dataexplorer \
-    --allow-websocket-origin $ip:$port --port $port --num-procs $N \
+    --allow-websocket-origin $ip:$port \
+    --allow-websocket-origin=dataexplorer.igs.bau.tu-bs.de:$port \
+    --port $port --num-procs $N \
     --log-level $loglevel > /home/pi/dataexplorer/dataexplorer.log 2>&1 &
