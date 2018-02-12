@@ -38,6 +38,12 @@ parser.add_argument('-n', '--name', action='store', type=str,
                     help='Name of the loaded data',
                     default='Example Data')
 
+parser.add_argument('--server_mode', action='store_true',
+                    dest='server_mode',
+                    help='Server mode enables the "leave page" confirmation '
+                    'dialog and removes uploaded files after use',
+                    default=False)
+
 args = parser.parse_args()
 
 if args.file_path is not None:
@@ -45,6 +51,6 @@ if args.file_path is not None:
 else:
     df = create_test_data()
 
-DatEx = Dataexplorer(df, args.data_name)
+DatEx = Dataexplorer(df, args.data_name, args.server_mode)
 
 # The script ends here (but Bokeh keeps waiting for user input)

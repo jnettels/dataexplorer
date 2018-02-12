@@ -113,7 +113,7 @@ class Dataexplorer(object):
     new object to make them survive the switch of sessions.
     '''
 
-    def __init__(self, df, data_name, combinator=0, vals_max=6):
+    def __init__(self, df, data_name, server_mode, combinator=0, vals_max=6):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -134,6 +134,7 @@ class Dataexplorer(object):
         self.df = df
         self.vals_max = vals_max  # Threshold for number of value columns
         self.data_name = data_name
+        self.server_mode = server_mode
         self.combinator = combinator  # Identifier for combinatoric generator
         self.grid_needs_update = False
         self.table_needs_update = False
@@ -683,7 +684,7 @@ def create_layout(self):
     curdoc().title = 'DataExplorer: '+self.data_name  # Set browser title
 
     # Things to when not in a debugging mode:
-    if logging.getLogger().getEffectiveLevel() == logging.CRITICAL:
+    if self.server_mode is True:
         # Activate 'leave page' confirmation dialog after a certain time
         curdoc().add_timeout_callback(partial(update_nav_confirm, active=True),
                                       timeout_milliseconds=2*60*1000)
@@ -1363,6 +1364,10 @@ def load_file(filepath, DatEx):
 
     logging.debug('Loaded ' + filepath)
 
+    if DatEx.server_mode is True:
+        logging.debug('Removing ' + filepath)
+        os.remove(filepath)  # Remove the file after loading its data
+
     '''Now that the new data is loaded, we need to replace the old data or
     append to it'''
     if not DatEx.load_mode_append:  # Means: Load mode = replace
@@ -1390,7 +1395,8 @@ def load_file(filepath, DatEx):
     combinator_last = DatEx.combinator
 
     '''Start the recreation of the UI by creating a new Dataexplorer object'''
-    DatEx = Dataexplorer(df, data_name, combinator=combinator_last)
+    DatEx = Dataexplorer(df, data_name, DatEx.server_mode,
+                         combinator=combinator_last)
     # (The script is basically restarted at this point)
 
 
