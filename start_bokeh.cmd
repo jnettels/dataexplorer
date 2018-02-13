@@ -17,14 +17,14 @@ set loglevel=%2
 if not defined loglevel set loglevel=critical
 
 rem # The full path to the batch file's directory
-set folder=%~dp0
+set "folder=%~dp0"
 
 echo This batch file starts a Bokeh server that can be accessed remotely.
 echo - For local access type "localhost:%port%/dataexplorer" in local browser.
 echo - For remote access type "%IP%:%port%/dataexplorer" in remote browser.
 
 rem # Start Bokeh server with enabled remote access and the given log-level
-bokeh serve %folder% --show --allow-websocket-origin localhost:%port% ^
+bokeh serve "%folder%\" --show --allow-websocket-origin localhost:%port% ^
  --allow-websocket-origin %ip%:%port% --port %port% ^
  --log-level %loglevel%
 
