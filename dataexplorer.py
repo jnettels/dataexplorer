@@ -650,6 +650,15 @@ def create_corr_matrix_heatmap(self):
     return self.corr_matrix_heatmap
 
 
+def create_info_tab():
+    f_path = os.path.join(os.path.dirname(__file__), 'templates', 'info.html')
+    with open(f_path, 'r') as f:
+        info_text = f.read()
+
+    div = Div(text=info_text, width=800)
+    return widgetbox(div)
+
+
 def create_layout(self):
     '''Create Bokeh 'layouts' from the widgetboxes and grid of figures and the
     content for the other tabs. The layouts are organized into tabs and those
@@ -671,12 +680,14 @@ def create_layout(self):
     layout_2 = layout(self.data_table)
     layout_3 = layout(self.corr_matrix_heatmap)
     layout_4 = layout(self.wb_list_2)
+    layout_5 = layout(create_info_tab())
 
     tab_1 = Panel(child=layout_1, title='Scatters')
     tab_2 = Panel(child=layout_2, title='Data Table')
     tab_3 = Panel(child=layout_3, title='Correlation')
     tab_4 = Panel(child=layout_4, title='Settings')
-    tabs = Tabs(tabs=[tab_1, tab_2, tab_3, tab_4])
+    tab_5 = Panel(child=layout_5, title='Info')
+    tabs = Tabs(tabs=[tab_1, tab_2, tab_3, tab_4, tab_5])
     tabs.on_change('active', partial(callback_tabs, DatEx=self))
 
     curdoc().clear()  # Clear any previous document roots
@@ -1500,5 +1511,6 @@ if __name__ == "__main__":
     '''
     df = create_test_data()
     data_name = 'Example Data'
+    server_mode = False
 
-    Dataexplorer(df, data_name)
+    Dataexplorer(df, data_name, server_mode)
