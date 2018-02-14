@@ -1,64 +1,105 @@
-<h1>DataExplorer</h1>
-<div>The DataExplorer helps you view your data in an interactive way and find correlations in your data. It is powered by <a href="https://www.python.org/" target="_blank" rel="noopener">Python</a> and <a href="https://bokeh.pydata.org" target="_blank" rel="noopener">Bokeh</a>.</div>
+<h1><img src="dataexplorer/static/favicon-32x32.png" alt="Icon"
+width="32" height="32"> DataExplorer
+</h1>
+<div>The DataExplorer displays your data in an interactive way and helps
+to find correlations. It is powered by 
+<a href="https://www.python.org/" target="_blank" rel="noopener">Python</a> and
+<a href="https://bokeh.pydata.org" target="_blank" rel="noopener">Bokeh</a>.
+</div>
 <h2>Usage of the application</h2>
-<h3>Scatters</h3>
-<ul>
-<li>This tab shows the plots of your data</li>
-<li>You can filter your data by the classes that were recognized in your data</li>
-<li>One classification can be selected to be used for the coloured legend</li>
-<li>Experiment with the tools in the toolbar on the left to pan and zoom the view</li>
-<li>The selection tools help to focus on specific scatter points</li>
-<li>Hold <em>Shift</em> to make multiple selections</li>
-</ul>
-<h3>Data Table</h3>
-<ul>
-<li>This tab shows the raw data in a table view</li>
-<li>Selections made in <em>Scatters </em>will be highlighted here, and vice versa</li>
-<li>Use <em>Shift</em> and <em>Ctrl</em> for selections of multiple rows</li>
-</ul>
-<h3>Correlation</h3>
-<ul>
-<li>This tab shows a colour coded matrix of the Pearson correlation coefficients</li>
-<li>Hovering over the tiles shows the numeric values of the coefficients</li>
-<li>The selected tiles represent the plots shown in Scatters</li>
-<li>You can change the selection with the <em>Tap</em> tool. Hold <em>Shift</em> to make multiple selections</li>
-<li>Once you return to <em>Scatters</em>, the requested plots will be generated</li>
-</ul>
-<h3>Settings</h3>
-<ul>
-<li>This tab features several settings for the application</li>
-<li>Upload new data and download the currently selected data</li>
-<li>Change properties of the plots</li>
-<li>Select which plots to show</li>
-<li>Select which value columns and classifications are used for the plots. Increasing the number of value columns increases the potential number of plots with the power of two, and too many plots will crash the application. For this reason, there is a threshold for the number of value columns (which you can change).</li>
-<li>Once you return to the other tabs, they are updated accordingly</li>
-</ul>
+    <h3>Scatters</h3>
+    <ul>
+        <li>This tab shows the plots of your data</li>
+        <li>You can filter your data by the classes that were recognized in
+        your data</li>
+        <li>One classification can be selected to be used for the coloured
+        legend</li>
+        <li>Experiment with the tools in the toolbar on the left to pan and
+        zoom the view</li>
+        <li>The selection tools help to focus on specific scatter points</li>
+        <li>Hold <em>Shift</em> to make multiple selections</li>
+    </ul>
+    <h3>Data Table</h3>
+    <ul>
+        <li>This tab shows the raw data in a table view</li>
+        <li>Selections made in <em>Scatters </em>will be highlighted here, and
+        vice versa</li>
+        <li>Use <em>Shift</em> and <em>Ctrl</em> for selections of multiple
+        rows</li>
+    </ul>
+    <h3>Correlation</h3>
+    <ul>
+        <li>This tab shows a colour coded matrix of the Pearson correlation
+        coefficients</li>
+        <li>Hovering over the tiles shows the numeric values of the
+        coefficients</li>
+        <li>The selected tiles represent the plots shown in Scatters</li>
+        <li>You can change the selection with the <em>Tap</em> tool. Hold
+        <em>Shift</em> to make multiple selections</li>
+        <li>Once you return to <em>Scatters</em>, the requested plots will be
+        generated</li>
+    </ul>
+    <h3>Settings</h3>
+    <ul>
+        <li>This tab features several settings for the application</li>
+        <li>Upload new data and download the currently selected data</li>
+        <li>Change properties of the plots</li>
+        <li>Select which plots to show</li>
+        <li>Select which value columns and classifications are used for the
+        plots. Increasing the number of value columns increases the potential
+        number of plots with the power of two, and too many plots will crash
+        the application. For this reason, there is a threshold for the number
+        of value columns (which you can change).</li>
+        <li>Once you return to the other tabs, they are updated
+        accordingly</li>
+    </ul>
 <h2>Data format</h2>
-<p>The easiest way to learn how to format your data for the DataExplorer is to download the example data. Due to technical limitations, this will give you a .csv file. While this file type is supported for upload, the recommended way is an Excel workbook (.xsl, .xlsx). Output of Synavision's <em>Digitaler Pr&uuml;fstand</em> is supported as well.</p>
-<p>The format for Excel files is very simplistic, but please consider these basic rules:</p>
-<ul>
-<li>Only the first sheet of the uploaded workbook is read in. The contents of the other sheets are ignored</li>
-<li>The first row must contain the headers (names) of each column</li>
-<li>The data must start at the second row</li>
-<li>Do not include any empty rows within your data</li>
-<li>Missing values in columns are allowed and will be displayed as <em>NaN</em> (not a number)</li>
-<li>Excel's time format is automatically recognized and displayed properly. Use it to plot pretty time series</li>
-</ul>
-<p>The DataExplorer lets you filter your data by classes:</p>
-<ul>
-<li>Columns containing text instead of numbers are used as class columns</li>
-<li>The names of these columns are used as classifications (A classification is a group of several classes)</li>
-<li>The contents of these columns are used as classes (within each classification)</li>
-<li>You can force a column to be recognized as a class column, if its header contains an exclamation mark "!". This is useful if your classes are represented by numbers</li>
-<li>All other columns are used as value columns</li>
-<li>You do not need classifications, but it makes the DataExplorer more useful</li>
-<li>If no classifications are found, a classification <em>File</em> with the name of the file as a class is created</li>
-</ul>
-<p>Notes on appending new data:</p>
-<ul>
-<li>For the upload, you can choose between <em>replace</em> and <em>append</em></li>
-<li><em>Append</em> will join all columns with identical header names in the old and new data</li>
-<li>The file names are automatically used as additional classes in a new classification called <em>File</em></li>
-</ul>
+    <p>The easiest way to learn how to format your data for the DataExplorer is
+    to <a href="dataexplorer/static/excel_example.xlsx">download the Excel 
+    example data</a>.
+    Excel workbooks (.xlsx, .xls) are the recommended file type. Output of
+    Synavision's <em>Digitaler Pr&uuml;fstand</em> is supported as well.
+    Generic <em>comma-separated value (csv)</em> files are not guaranteed to 
+    work, because the separator (comma, semicolon, whitespace) has to be 
+    guessed.</p>
+    <p>The format for Excel files is very simplistic, but please consider these
+    basic rules:</p>
+    <ul>
+        <li>Only the first sheet of the uploaded workbook is read in. The
+        contents of the other sheets are ignored</li>
+        <li>The first row must contain the headers (names) of each column</li>
+        <li>The data must start at the second row</li>
+        <li>Do not include any empty rows within your data</li>
+        <li>Missing values in columns are allowed and will be displayed as
+        <em>NaN</em> (not a number)</li>
+        <li>Excel's time format is automatically recognized and displayed
+        properly. Use it to plot pretty time series</li>
+    </ul>
+    <p>The DataExplorer lets you filter your data by classes:</p>
+    <ul>
+        <li>Columns containing text instead of numbers are used as class
+        columns</li>
+        <li>The names of these columns are used as classifications (A
+        classification is a group of several classes)</li>
+        <li>The contents of these columns are used as classes (within each
+        classification)</li>
+        <li>You can force a column to be recognized as a class column, if its
+        header contains an exclamation mark "!". This is useful if your classes
+        are represented by numbers</li>
+        <li>All other columns are used as value columns</li>
+        <li>You do not need classifications, but it makes the DataExplorer more
+        useful</li>
+        <li>If no classifications are found, a classification <em>File</em>
+        with the name of the file as a class is created</li>
+    </ul>
+    <p>Notes on appending new data:</p>
+    <ul>
+        <li>For the upload, you can choose between <em>replace</em> and
+        <em>append</em></li>
+        <li><em>Append</em> will join all columns with identical header names
+        in the old and new data</li>
+        <li>The file names are automatically used as additional classes in a
+        new classification called <em>File</em></li>
+    </ul>
 <h2>Help</h2>
-<p>For further help, please contact Joris Nettelstroth.</p>
+    <p>For further help, please contact Joris Nettelstroth.</p>
