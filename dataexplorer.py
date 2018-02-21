@@ -174,6 +174,9 @@ class Dataexplorer(object):
         # Create a Bokeh "layout" from the widgets and grid of figures
         create_layout(self)
 
+        # Loading the file enabled the loading animation. Now we disable it:
+        toggle_loading_mouse(False)
+
     def get_columns_sorted(self):
         # If a time column exists, it should be the first column in DataTable
         if self.col_time is not None:
@@ -1449,6 +1452,25 @@ def update_nav_confirm(active):
 
     run_js_code(js_code)
     logging.critical('nav_confirm is now '+str(active))
+
+
+def toggle_loading_mouse(active):
+    '''Enable or disable a loading mouse animation.
+
+    Args:
+        active (bool): State of the toggle
+
+    Returns:
+        None
+    '''
+    if active:
+        js_code = '''document.body.style.cursor = "wait";
+                  '''
+    else:
+        js_code = '''document.body.style.cursor = "auto";
+                     window.scroll(0, 0);
+                  '''
+    run_js_code(js_code)
 
 
 def run_js_code(js_code):

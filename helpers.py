@@ -143,7 +143,8 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
         callback(file_path, DatEx)
 
     # This 'source' will be filled by the JavaScript callback
-    source = ColumnDataSource({'contents': [], 'name': []})
+    source = ColumnDataSource({'contents': [0], 'name': [0],
+                               'server_mode': [DatEx.server_mode]})
     source.on_change('data', file_callback)
 
     # Create the button widget

@@ -8,15 +8,25 @@ function read_file(filename) {
 
 function load_handler(event) {
     var b64string = event.target.result;
+    var file_size_MB = format_bytes(format_b64_chars(b64string.length));
+
+
+    if (source.data['server_mode'][0]){
+        // It is assumed that in server mode, the upload limit problem is fixed
+    }
+    else{
+        if (b64string.length > 10*1000*1000) {
+            alert(input.files[0].name+' is '+file_size_MB+'. If the upload '+
+            'does not work, please contact an administrator (and/or refer to '+
+            'the known issues in dataexplorer.py).');
+        }
+    }
+    // Spinning mouse wheel animation
+    document.body.style.cursor = "wait";
+
+    // Perform the "upload"
     source.data = {'contents' : [b64string], 'name':[input.files[0].name]};
     source.change.emit()
-    
-    var file_size_MB = format_bytes(format_b64_chars(b64string.length));
-    if (b64string.length > 10*1000*1000) {
-        alert(input.files[0].name+' is '+file_size_MB+'. If the upload does '+
-        'not work, please contact Joris (and/or refer to the known issues '+
-        'in dataexplorer.py).');
-    }
 }
 
 function error_handler(evt) {
