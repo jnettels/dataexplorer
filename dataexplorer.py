@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-@version: 0.10
+@version: 1.0.0
 
 @author: Joris Nettelstroth
 
@@ -36,7 +36,6 @@ is required for the batch file to work.
 
 TODO:
     - Fix axis ranges
-    - Highlight a plot (e.g. add red border) by clicking on it
     - Transfer session settings via DatEx.__dict__
 
 Known issues:
@@ -44,12 +43,18 @@ Known issues:
     - By default, there is a limit of about 8 MB of data upload to the
       browser. This is controlled by the Tornado server, with the parameter
       'websocket_max_message_size'.
-      In '\Anaconda3\Lib\site-packages\bokeh\server\tornado.py' go to line 221:
-      super(BokehTornado, self).__init__(all_patterns)
+      In Anaconda3/Lib/site-packages/bokeh/server/tornado.py go to line 221:
+
+      .. code:: python
+
+          super(BokehTornado, self).__init__(all_patterns)
 
       For 100 MB upload limit, replace it with:
-      super(BokehTornado, self).__init__(all_patterns,
-      websocket_max_message_size=100*1024*1024)
+
+      .. code:: python
+
+          super(BokehTornado, self).__init__(all_patterns,
+                websocket_max_message_size=100*1024*1024)
 
       Also see: https://github.com/bokeh/bokeh/issues/7374
 
@@ -120,9 +125,11 @@ class Dataexplorer(object):
         interface by calling the required functions.
 
         Args:
-            df (Pandas DataFrame) : The input data we want to explore.
+            df (Pandas DataFrame): The input data we want to explore.
 
-            data_name (str) : The filename of the current data set.
+            data_name (str): The filename of the current data set.
+
+            server_mode (bool): Is server_mode enabled or disabled?
 
             combinator (int, optional): A identifier for combinatoric generator
 
@@ -178,6 +185,18 @@ class Dataexplorer(object):
         toggle_loading_mouse(False)
 
     def get_columns_sorted(self):
+        '''Return a sorted list of the active column names in the order:
+
+            - Time column (if present)
+            - Classification columns
+            - Value columns
+
+        Args:
+            self (Dataexplorer): The object containing all the information
+
+        Returns:
+            columns (list): Sorted list of column names
+        '''
         # If a time column exists, it should be the first column in DataTable
         if self.col_time is not None:
             vals_wo_time = self.vals_active.copy()
@@ -654,6 +673,16 @@ def create_corr_matrix_heatmap(self):
 
 
 def create_info_tab():
+    '''Deliver the information text for the "Info" tab.
+    Returns a widgetbox containing a html div created from the contents
+    of the "info.html" template file.
+
+    Args:
+        None
+
+    Returns:
+        div (widgetbox): A widgetbox containing the info text html div
+    '''
     f_path = os.path.join(os.path.dirname(__file__), 'templates', 'info.html')
     with open(f_path, 'r') as f:
         info_text = f.read()
@@ -1333,6 +1362,15 @@ def get_colourmap(classes):
 
 
 def get_combinations(DatEx):
+    '''Return the current possible combinations of selectable plots,
+    dependent of the combinator and the current active values.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the information
+
+    Returns:
+        combis (list): List of pairs of value column names
+    '''
     # A choice of combinatoric generators with increasing number of results:
     if DatEx.combinator == 0:
         combis = itertools.combinations(DatEx.vals_active, r=2)
