@@ -929,9 +929,15 @@ def update_colours(DatEx):
     except Exception:  # filter_combined_ri may not exist yet
         DatEx.df_index_last = DatEx.df.index
 
+    # Prepare for sorting not only the colour_classif classes, but also the
+    # remaining classification columns to avoid unsorted data tables
+    rest = DatEx.classifs_active.copy()
+    rest.remove(DatEx.colour_classif)
+    sort_list = [DatEx.colour_classif] + rest  # classifs_active list reordered
+
     # Now sort df and update/create columns
     colormap = get_colourmap(DatEx.classes_dict[DatEx.colour_classif])
-    DatEx.df.sort_values(by=[DatEx.colour_classif], inplace=True)
+    DatEx.df.sort_values(by=sort_list, inplace=True)
     DatEx.df['Legend'] = DatEx.df[DatEx.colour_classif]
     DatEx.df['Colours'] = [colormap[x] for x in DatEx.df[DatEx.colour_classif]]
 
