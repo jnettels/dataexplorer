@@ -1207,22 +1207,30 @@ def callback_tabs(attr, old, new, DatEx):
     '''
     if new == 0:  # First tab
         if DatEx.grid_needs_update:
+            toggle_loading_mouse(True)  # Begin loading mouse animation
             update_gridplot(DatEx)
             DatEx.grid_needs_update = False
+            toggle_loading_mouse(False)  # End loading mouse animation
 
         if DatEx.classifs_need_update:
+            toggle_loading_mouse(True)  # Begin loading mouse animation
             update_classifs(DatEx)
             DatEx.classifs_need_update = False
+            toggle_loading_mouse(False)  # End loading mouse animation
 
     elif new == 1:  # Second tab
         if (DatEx.table_needs_update):
+            toggle_loading_mouse(True)  # Begin loading mouse animation
             update_table(DatEx)
             DatEx.table_needs_update = False
+            toggle_loading_mouse(False)  # End loading mouse animation
 
     elif new == 2:  # Third tab
         if (DatEx.corr_matrix_needs_update):
+            toggle_loading_mouse(True)  # Begin loading mouse animation
             update_corr_matrix_heatmap(DatEx)
             DatEx.corr_matrix_needs_update = False
+            toggle_loading_mouse(False)  # End loading mouse animation
 
         update_hm_source_selected(DatEx)
 
