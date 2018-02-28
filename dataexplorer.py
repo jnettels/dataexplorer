@@ -198,10 +198,10 @@ class Dataexplorer(object):
             columns (list): Sorted list of column names
         '''
         # If a time column exists, it should be the first column in DataTable
-        if self.col_time is not None:
-            vals_wo_time = self.vals_active.copy()
-            vals_wo_time.remove(self.col_time)
-            columns = [self.col_time] + self.classifs_active + vals_wo_time
+        if self.col_time is not None and self.col_time in self.vals_active:
+            vals_list = self.vals_active.copy()
+            vals_list.remove(self.col_time)
+            columns = [self.col_time] + self.classifs_active + vals_list
         else:
             columns = self.classifs_active + self.vals_active
 
@@ -657,7 +657,8 @@ def create_corr_matrix_heatmap(self):
     # Apply the filters
     df_filtered = self.df[self.filter_combined_ri][self.vals_active]
     # Convert the datetime column to seconds to allow calculating correlations
-    if self.col_time is not None:  # This only works if there is a time column
+    if self.col_time is not None and self.col_time in self.vals_active:
+        # This only works if there is a time column and it is selected
         df_filtered[self.col_time] = pd.to_timedelta(df_filtered[self.col_time]
                                                      ).astype('timedelta64[s]')
     # Calculate the correlation matrix
@@ -967,6 +968,11 @@ def update_rg_comb(DatEx):
         combis_2+' plots (Equivalent to full correlation coefficient matrix)',
         combis_3+' plots (Custom selection in "Correlation" tab)']
 
+    if DatEx.col_time is not None and DatEx.col_time in DatEx.vals_active:
+        # Time series option is only shown when applicable
+        combis_4 = str(len(get_time_series_selections(DatEx)))
+        DatEx.rg_comb.labels.append(combis_4+' plots (Show time series only)')
+
 
 def update_vals_active(attr, old, new, DatEx):
     '''Function associated with value column selection widget 'cg_vals'.
@@ -996,11 +1002,21 @@ def update_vals_active(attr, old, new, DatEx):
     else:
         # Translate the active button positions into chosen category strings:
         DatEx.vals_active = [DatEx.vals[j] for j in new]
+
+        # Check for no longer valid selections:
+        if DatEx.combinator == 3 or \
+           (DatEx.combinator == 4 and DatEx.col_time not in DatEx.vals_active):
+            # Reset the figure selection, because it is no longer valid
+            DatEx.combinator = 0
+            DatEx.selected_figs = get_combinations(DatEx)
+
+        # Update labels of figure selection RadioGroup
+        update_rg_comb(DatEx)
+
         # Set the required update flags:
         DatEx.grid_needs_update = True
         DatEx.table_needs_update = True
         DatEx.corr_matrix_needs_update = True
-        update_rg_comb(DatEx)  # Update list of combinator generator selection
 
 
 def update_classifs_active(attr, old, new, DatEx):
@@ -1392,9 +1408,31 @@ def get_combinations(DatEx):
         combis = itertools.permutations(DatEx.vals_active, r=2)
     elif DatEx.combinator == 2:
         combis = itertools.product(DatEx.vals_active, repeat=2)
-    else:  # DatEx.combinator == 3
+    elif DatEx.combinator == 3:
         combis = DatEx.selected_figs
+    elif DatEx.combinator == 4:  # Time series only
+        combis = get_time_series_selections(DatEx)
+
     return list(combis)
+
+
+def get_time_series_selections(DatEx):
+    '''Construct plot selection list that only contains the time series plots.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the information
+
+    Returns:
+        time_series_sel (list): List of pairs of value column names
+    '''
+    vals_list = DatEx.vals_active.copy()
+    try:
+        vals_list.remove(DatEx.col_time)
+    except ValueError:  # Will throw if col_time is not in the list
+        pass
+
+    time_series_sel = [(DatEx.col_time, val) for val in vals_list]
+    return time_series_sel
 
 
 def load_file(filepath, DatEx):
@@ -1457,12 +1495,8 @@ def load_file(filepath, DatEx):
             logging.debug(ex)
             pass
 
-    # Save some settings:
-    combinator_last = DatEx.combinator
-
     '''Start the recreation of the UI by creating a new Dataexplorer object'''
-    DatEx = Dataexplorer(df, data_name, DatEx.server_mode,
-                         combinator=combinator_last)
+    DatEx = Dataexplorer(df, data_name, DatEx.server_mode)
     # (The script is basically restarted at this point)
 
 
