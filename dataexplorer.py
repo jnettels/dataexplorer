@@ -35,7 +35,6 @@ manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
 TODO:
-    - Fix axis ranges
     - Transfer session settings via DatEx.__dict__
 
 Known issues:
@@ -434,7 +433,38 @@ def create_plots(self):
 
     self.grid = grid
     self.legend_top = legend_top
+
+    # Link the ranges of the axis with the same description
+    link_axis_ranges(self)
+
     return self.grid
+
+
+def link_axis_ranges(self):
+    '''Link the figure ranges of the axis with the same description.
+
+    Args:
+        self (Dataexplorer) : The object containing all the session information
+
+    Returns:
+        None
+    '''
+    # Create and fill dicts with reference figures for each column
+    ref_figs_x = dict()  # Reference figure to link x_axis to
+    ref_figs_y = dict()  # Reference figure to link y_axis to
+    for i, vals in enumerate(self.selected_figs):
+        x_val, y_val = vals
+        ref_figs_x[x_val] = i  # Store i as reference figure
+        ref_figs_y[y_val] = i  # Store i as reference figure
+
+    # Walk through the list of figures to link each column to their
+    # reference figure
+    for i, vals in enumerate(self.selected_figs):
+        x_val, y_val = vals
+        fig = self.fig_list[i]
+        # Set x and y range of current figure
+        fig.x_range = self.fig_list[ref_figs_x[x_val]].x_range
+        fig.y_range = self.fig_list[ref_figs_y[y_val]].y_range
 
 
 def create_widgets_1(self):
