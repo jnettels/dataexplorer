@@ -597,6 +597,10 @@ def create_widgets_2(self):
     self.rg_comb = rg_comb
     update_rg_comb(self)  # Set the actual label text of rg_comb
 
+    # Toggle: Select all or no value columns
+    tgl_all_vals = Toggle(label='Toggle all value columns', active=True)
+    tgl_all_vals.on_click(partial(update_tgl_all_vals, DatEx=self))
+
     # CheckboxGroup: Two multiple choice selections for the used value columns
     # and classifications. The groups are wrapped in scrollable columns.
     div_vals = Div(text='''<div style="position:relative; top:9px">
@@ -627,7 +631,7 @@ def create_widgets_2(self):
     self.wb_list_2 = [[but_load_new, rg_load, but_download],
                       div_space_1,
                       [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
-                      [sl_vals_max, rg_comb],
+                      [sl_vals_max, rg_comb, tgl_all_vals],
                       [div_vals, div_classifs],
                       [cg_vals_col, cg_classifs_col]]
 
@@ -1011,6 +1015,26 @@ def update_rg_comb(DatEx):
         # Time series option is only shown when applicable
         combis_4 = str(len(get_time_series_selections(DatEx)))
         DatEx.rg_comb.labels.append(combis_4+' plots (Show time series only)')
+
+
+def update_tgl_all_vals(active, DatEx):
+    '''Function associated with toggle widget 'tgl_all_vals'.
+    Select all (while respecting the threshold) or no value columns in the
+    CheckboxGroup cg_vals.
+
+    Args:
+        active (bool): State of the toggle button
+
+        DatEx (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
+    if active is True:
+        DatEx.cg_vals.active = list(range(0, min(len(DatEx.vals),
+                                                 DatEx.vals_max)))
+    else:
+        DatEx.cg_vals.active = []
 
 
 def update_vals_active(attr, old, new, DatEx):
