@@ -80,8 +80,7 @@ from bokeh.plotting import figure
 from bokeh import palettes
 from bokeh.io import curdoc
 from functools import partial
-from pandas.api.types import is_categorical_dtype
-# from pandas.api.types import CategoricalDtype
+from pandas.api.types import is_categorical_dtype, CategoricalDtype
 from bokeh.io import export_png, export_svgs
 from distutils.version import StrictVersion
 
@@ -265,8 +264,18 @@ def analyse_dataframe(self):
     for classif in classifs:
         try:  # Try to sort the classes
             classes = list(set(df[classif]))  # Get classes of classification
-            classes_dict[classif] = sorted(classes)  # Sort and store them
+            try:  # First try sorting like a number
+                classes.sort(key=float)
+            except Exception:  # Then try default sorting
+                logging.debug("Debug: Float sorting failed")
+                classes.sort()
+            classes_dict[classif] = classes  # Store sorted classes
+            # Make ordered 'categorical' by using the sorted classes
+            cat_Dtype = CategoricalDtype(categories=classes, ordered=True)
+            df[classif] = df[classif].astype(cat_Dtype)
         except Exception as ex:  # Map to strings before sorting
+            # TODO: Check if this is still required
+            logging.error("Debug: Regular sorting failed")
             df[classif] = list(map(str, df[classif]))
             classes = list(set(df[classif]))  # Get classes of classification
             classes_dict[classif] = sorted(classes)  # Sort and store them
@@ -286,7 +295,7 @@ def analyse_dataframe(self):
 
     # The first classification is the default colour classification
     self.colour_classif = classifs[0]  # Name of current colour classification
-    # Create (or update) 'Legend' and 'Colours' columns
+    # Create (or update) 'Legend' and 'Colours' columns and sort data
     update_colours(self)
     # Create the Bokeh ColumnDataSource object from Pandas DataFrame
     self.source = ColumnDataSource(data=df)
