@@ -86,7 +86,8 @@ from distutils.version import StrictVersion
 
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
-                     read_filetypes, new_download_button)
+                     read_filetypes, new_download_button,
+                     enable_responsiveness)
 
 # Global Pandas option for displaying terminal output
 # pd.set_option('display.expand_frame_repr', False)
@@ -116,7 +117,8 @@ class Dataexplorer(object):
     new object to make them survive the switch of sessions.
     '''
 
-    def __init__(self, df, data_name, server_mode, combinator=0, vals_max=6):
+    def __init__(self, df, data_name, server_mode, combinator=0, vals_max=6,
+                 window_height=974, window_width=1920):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -150,6 +152,8 @@ class Dataexplorer(object):
         self.p_w = 250  # global setting for plot_width
         self.load_mode_append = 0  # 0 equals False equals replace
         self.selected_figs = []
+        self.window_height = window_height  # Pixels of browser window
+        self.window_width = window_width  # Pixels of browser window
 
         # Set classifications, their classes and value column names
         try:
@@ -400,7 +404,8 @@ def create_plots(self):
     the top and bottom of the page. For a nice look, we remove all parts of the
     figures but the legends themselves.
     '''
-    legend_top = figure(plot_height=50, plot_width=1850)
+    max_width = self.window_width-75
+    legend_top = figure(plot_height=50, plot_width=max_width)
     legend_bot = figure(plot_height=2*self.p_h, plot_width=2*self.p_w)
 
     for legend_x in [legend_top, legend_bot]:
@@ -424,6 +429,11 @@ def create_plots(self):
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))-1
     else:
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
+
+    # Reduce the number of grid columns if the grid is too large
+    while n_grid_cols*self.p_w + 20 > max_width:  # Includes scrollbar
+        n_grid_cols -= 1
+
     # Create the final grid of figures
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
                     toolbar_options={'logo': None})
@@ -437,8 +447,8 @@ def create_plots(self):
     # We also need to fix the boundaries of this html DIV. The scrollbar
     # appears when the contents are too large (overflow occurs).
     grid.children[1].sizing_mode = 'fixed'
-    grid.children[1].height = 3*self.p_h
-    grid.children[1].width = (n_grid_cols+1)*self.p_w
+    grid.children[1].height = self.window_height-(200+50*len(self.classifs))
+    grid.children[1].width = max_width
 
     self.grid = grid
     self.legend_top = legend_top
@@ -651,9 +661,9 @@ def create_data_table(self):
     create_data_table_columns(self)
 
     data_table = DataTable(source=self.source, columns=self.dt_columns,
-                           fit_columns=True,
-                           width=1850,
-                           height=800,
+                           width=self.window_width-50,
+                           height=self.window_height-100,
+                           fit_columns=False,
                            scroll_to_selection=False,
                            sortable=True,
                            reorderable=False,  # Reordering is not supported!
@@ -765,6 +775,8 @@ def create_layout(self):
     tab_5 = Panel(child=layout_5, title='Info')
     tabs = Tabs(tabs=[tab_1, tab_2, tab_3, tab_4, tab_5])
     tabs.on_change('active', partial(callback_tabs, DatEx=self))
+
+    enable_responsiveness(self, tabs)  # enable resizing of some UI elements
 
     curdoc().clear()  # Clear any previous document roots
     curdoc().add_root(tabs)  # Add a new root to the document
@@ -1559,7 +1571,9 @@ def load_file(filepath, DatEx):
             pass
 
     '''Start the recreation of the UI by creating a new Dataexplorer object'''
-    DatEx = Dataexplorer(df, data_name, DatEx.server_mode)
+    DatEx = Dataexplorer(df, data_name, DatEx.server_mode,
+                         window_height=DatEx.window_height,
+                         window_width=DatEx.window_width)
     # (The script is basically restarted at this point)
 
 

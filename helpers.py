@@ -236,6 +236,47 @@ def show_confirm_dialog(message):
     return
 
 
+def enable_responsiveness(DatEx, tabs):
+    '''Call this function once to enable resizing of some of the UI elements.
+    This does not make the Bokeh app truly responsive, but at least makes
+    the grid of figures and the DataTable adapt to changes of the browser
+    window size, whenever the user switches between the tabs.
+
+    Args:
+        DatEx (Dataexplorer): The object containing all the session information
+
+        tabs (Bokeh widget): A Bokeh 'Tabs' widget to attach the callback to
+
+    Returns:
+        None
+    '''
+    def source_callback(attr, old, new):
+        '''Callback of the source object. Updates the properties of DatEx with
+        the new browser sizes. It will only be called if the sizes change.
+        '''
+        DatEx.window_height = source.data['window_height'][0]
+        DatEx.window_width = source.data['window_width'][0]
+        # Resize the DataTable
+        DatEx.data_table.width = DatEx.window_width-50
+        DatEx.data_table.height = DatEx.window_height-100
+        # Mark the grid of figures for an update (which will use the new size)
+        DatEx.grid_needs_update = True
+        return
+
+    # Create source object that will react to a change of its data
+    source = ColumnDataSource({'window_height': [DatEx.window_height],
+                               'window_width': [DatEx.window_width]})
+    source.on_change('data', source_callback)
+
+    # Define JavaScript code and attach it to the widget
+    js_code = '''source.data = {'window_height': [window.innerHeight],
+                                'window_width': [window.innerWidth]};
+                 source.change.emit()'''
+    tabs.js_on_change('active', CustomJS(args=dict(source=source),
+                                         code=js_code))
+    return
+
+
 def create_heatmap(corr_matrix, DatEx):
     '''Create and return a heatmap plot for a given correlation matrix.
 
