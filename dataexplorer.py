@@ -135,6 +135,10 @@ class Dataexplorer(object):
 
             vals_max (int, optional): A threshold for number of value columns
 
+            window_height (int, optional): Browser window height
+
+            window_width (int, optional): Browser window width
+
         Returns:
             None
         '''
@@ -168,19 +172,19 @@ class Dataexplorer(object):
         # Prepare the filters used to explore the data
         prepare_filter(self)
 
-        # Create and get a list of the widgets for tab 1
+        # Create and get a list of the widgets for tab 'Scatters'
         create_widgets_1(self)
 
-        # Create and get a list of the widgets for tab 2
+        # Create and get a list of the widgets for tab 'Settings'
         create_widgets_2(self)
 
-        # Create and get the DataTable for tab 3
+        # Create and get the DataTable for tab 'DataTable'
         create_data_table(self)
 
-        # Create a correlation coefficient matrix plot
+        # Create a correlation coefficient matrix plot for tab 'Correlation'
         create_corr_matrix_heatmap(self)
 
-        # Create a Bokeh "layout" from the widgets and grid of figures
+        # Create a Bokeh 'layout' from all the tabs
         create_layout(self)
 
         # Loading the file enabled the loading animation. Now we disable it:
@@ -419,7 +423,7 @@ def create_plots(self):
         legend_x.outline_line_color = None
 
     legend_top.legend.orientation = 'horizontal'
-    self.fig_list.append(legend_bot)
+#    self.fig_list.append(legend_bot)  # Bottom legend currently disabled
 
     # Get the number of grid columns from the rounded square root of number of
     # figures.
@@ -447,7 +451,7 @@ def create_plots(self):
     # We also need to fix the boundaries of this html DIV. The scrollbar
     # appears when the contents are too large (overflow occurs).
     grid.children[1].sizing_mode = 'fixed'
-    grid.children[1].height = self.window_height-(200+50*len(self.classifs))
+    grid.children[1].height = self.window_height-60
     grid.children[1].width = max_width
 
     self.grid = grid
@@ -505,7 +509,7 @@ def create_widgets_1(self):
         classes = self.classes_dict[classif]  # Classes in a classification
         active_list = list(range(0, len(classes)))  # All classes start active
         cbg = CheckboxButtonGroup(labels=classes, active=active_list,
-                                  width=999)
+                                  width=self.window_width-(250+300+50))
         cbg_list.append(cbg)
 
         # Make the annotation for the CheckboxButtonGroup:
@@ -519,7 +523,7 @@ def create_widgets_1(self):
         # the "partial" function to transport that information
         cbg.on_click(partial(update_filters, caller=i, DatEx=self))
 
-    sel = Select(title='Classification used for legend:',
+    sel = Select(title='Classification used for legend:', width=300,
                  value=self.colour_classif, options=self.classifs_active)
     sel.on_change('value', partial(update_colour_classif, DatEx=self))
 
@@ -613,29 +617,32 @@ def create_widgets_2(self):
 
     # CheckboxGroup: Two multiple choice selections for the used value columns
     # and classifications. The groups are wrapped in scrollable columns.
+    scroll_height = max(self.window_height-410, 415)
     div_vals = Div(text='''<div style="position:relative; top:9px">
                    Select the value columns used in the plots:
-                   </div>''', height=0, width=600)
+                   </div>''', height=15, width=600)
     active_list = list(range(0, min(len(self.vals), self.vals_max)))
     cg_vals = CheckboxGroup(labels=self.vals, active=active_list)
     cg_vals.on_change('active', partial(update_vals_active, DatEx=self))
-    cg_vals_col = column(cg_vals, sizing_mode='fixed', height=500, width=600,
-                         css_classes=['scrollable'])
+    cg_vals_col = column(cg_vals, sizing_mode='fixed', width=600,
+                         height=scroll_height, css_classes=['scrollable'])
     self.cg_vals = cg_vals
+    self.cg_vals_col = cg_vals_col
 
     div_classifs = Div(text='''<div style="position:relative; top:9px">
                        Select the classifications used in the plots:
-                       </div>''', height=0, width=600)
+                       </div>''', height=15, width=600)
     active_list = list(range(0, len(self.classifs)))
     cg_classifs = CheckboxGroup(labels=self.classifs, active=active_list)
     cg_classifs.on_change('active', partial(update_classifs_active,
                                             DatEx=self))
-    cg_classifs_col = column(cg_classifs, sizing_mode='fixed', height=500,
-                             width=600, css_classes=['scrollable'])
+    cg_classifs_col = column(cg_classifs, sizing_mode='fixed', width=600,
+                             height=scroll_height, css_classes=['scrollable'])
     self.cg_classifs = cg_classifs
+    self.cg_classifs_col = cg_classifs_col
 
     # Spacer
-    div_space_1 = Div(text='''<div> </div>''', height=8, width=600)  # Empty
+    div_space_1 = Div(text='''<div> </div>''', height=1, width=600)  # Empty
 
     # Arrange the positions of widgets by listing them in the desired order
     self.wb_list_2 = [[but_load_new, rg_load, but_download],

@@ -261,6 +261,13 @@ def enable_responsiveness(DatEx, tabs):
         DatEx.data_table.height = DatEx.window_height-100
         # Mark the grid of figures for an update (which will use the new size)
         DatEx.grid_needs_update = True
+        # Adapt scrollable columns on settings page
+        DatEx.cg_vals_col.height = max(DatEx.window_height-410, 415)
+        DatEx.cg_classifs_col.height = DatEx.cg_vals_col.height
+        # Resize the correlation matrix
+        matrix_size = min(DatEx.window_height-100, DatEx.window_width-20)
+        DatEx.corr_matrix_heatmap.width = matrix_size
+        DatEx.corr_matrix_heatmap.height = matrix_size
         return
 
     # Create source object that will react to a change of its data
@@ -300,12 +307,14 @@ def create_heatmap(corr_matrix, DatEx):
     colours2 = palettes.plasma(20)[9:19]
     colours.extend(reversed(colours2))
     mapper = LinearColorMapper(palette=colours, low=-1, high=1)
+    matrix_size = min(DatEx.window_height-100, DatEx.window_width-20)
 
     # Create the figure
     p = figure(title='Correlation coefficient matrix',
                x_range=list(corr_matrix.columns),
                y_range=list(reversed(corr_matrix.columns)),
-               x_axis_location='above', plot_width=800, plot_height=800,
+               x_axis_location='above', plot_width=matrix_size,
+               plot_height=matrix_size,
                tools='save, pan, wheel_zoom, box_zoom, reset, tap',
                active_drag=None,
                toolbar_location='below', logo=None)
@@ -339,6 +348,12 @@ def create_heatmap(corr_matrix, DatEx):
                                 ('corr', '@value')]
                       )
     p.add_tools(hover)
+
+    # Hack: Force the figure to redraw when its height changes
+    js_code = '''var event = document.createEvent('HTMLEvents');
+                 event.initEvent('resize');
+                 window.dispatchEvent(event);'''
+    p.js_on_change('height', CustomJS(code=js_code))
 
     return p
 
