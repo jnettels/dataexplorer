@@ -44,6 +44,11 @@ parser.add_argument('--server_mode', action='store_true',
                     'dialog and removes uploaded files after use',
                     default=False)
 
+parser.add_argument('--bokeh_output_backend', action='store', type=str,
+                    dest='output_backend',
+                    help='Rendering options are "canvas", "webgl" and "svg"',
+                    default='canvas')
+
 args = parser.parse_args()
 
 if args.file_path is not None:
@@ -51,6 +56,7 @@ if args.file_path is not None:
 else:
     df = create_test_data()
 
-DatEx = Dataexplorer(df, args.data_name, args.server_mode)
+DatEx = Dataexplorer(df, args.data_name, args.server_mode,
+                     output_backend=args.output_backend)
 
 # The script ends here (but Bokeh keeps waiting for user input)

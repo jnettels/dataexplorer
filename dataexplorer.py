@@ -118,7 +118,8 @@ class Dataexplorer(object):
     '''
 
     def __init__(self, df, data_name, server_mode, combinator=0, vals_max=6,
-                 window_height=974, window_width=1920):
+                 window_height=974, window_width=1920,
+                 output_backend='canvas'):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -139,6 +140,9 @@ class Dataexplorer(object):
 
             window_width (int, optional): Browser window width
 
+            output_backend (str, optinal): Bokeh's rendering backend
+            (``"canvas``", ``"webgl"`` or ``"svg"``)
+
         Returns:
             None
         '''
@@ -158,6 +162,7 @@ class Dataexplorer(object):
         self.selected_figs = []
         self.window_height = window_height  # Pixels of browser window
         self.window_width = window_width  # Pixels of browser window
+        self.output_backend = output_backend
 
         # Set classifications, their classes and value column names
         try:
@@ -332,8 +337,7 @@ def create_plots(self):
                 # 'active_scroll': 'wheel_zoom',
                 'plot_height': self.p_h, 'plot_width': self.p_w,
                 'lod_factor': 1000,  # level-of-detail decimation
-                # 'output_backend': 'webgl',  # Better performance
-                # 'output_backend': 'svg',  # For export with SaveTool (Slow!)
+                'output_backend': self.output_backend,
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
                  'fill_alpha': 0.2, 'hover_alpha': 1,
