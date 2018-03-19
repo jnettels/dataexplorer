@@ -432,15 +432,16 @@ def create_plots(self):
     # Get the number of grid columns from the rounded square root of number of
     # figures.
     if self.combinator == 2:
-        n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))
+        n_grid_cols = int(np.sqrt(len(self.fig_list)))
     elif self.combinator == 1:
-        n_grid_cols = int(round(np.sqrt(len(self.fig_list)), 0))-1
+        n_grid_cols = int(np.floor(np.sqrt(len(self.fig_list))))
     else:
         n_grid_cols = int(round(np.sqrt(len(self.fig_list)))) + 1
 
     # Reduce the number of grid columns if the grid is too large
     while n_grid_cols*self.p_w + 20 > max_width:  # Includes scrollbar
         n_grid_cols -= 1
+    n_grid_cols = max(n_grid_cols, 1)  # must not become zero
 
     # Create the final grid of figures
     grid = gridplot(self.fig_list, ncols=n_grid_cols, toolbar_location='left',
