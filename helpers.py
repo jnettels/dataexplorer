@@ -178,11 +178,11 @@ def new_download_button(DatEx, label='Download current data selection'):
         button (widget) : Bokeh widget object, to be placed in a layout.
 
     '''
-    sel = DatEx.source.selected['1d']['indices']
-    if sel == []:
+    sel = DatEx.source.selected
+    if sel is None or sel.indices == []:
         df_sel = DatEx.df
     else:
-        df_sel = DatEx.df.iloc[sel]
+        df_sel = DatEx.df.iloc[sel.indices]
 
     filename = 'DataExplorer_Download.csv'
     filetext = df_sel.to_csv(sep=';',

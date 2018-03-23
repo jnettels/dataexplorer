@@ -74,7 +74,7 @@ from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput, Slider, Toggle
 from bokeh.models.widgets import RadioGroup
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
-from bokeh.models import CustomJS, HoverTool, Span
+from bokeh.models import CustomJS, HoverTool, Span, Selection
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
 from bokeh.plotting import figure
 from bokeh import palettes
@@ -98,10 +98,10 @@ pd_v_required = '0.21.0'
 if StrictVersion(pd.__version__) < StrictVersion(pd_v_required):
     logging.critical('Warning: Pandas version '+pd_v_required+' is required.' +
                      ' Your version is '+pd.__version__)
-bk_v_required = '0.12.13'
-if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
-    logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
-                     ' Your version is '+bokeh.__version__)
+bk_v_required = '0.12.15'
+#if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
+#    logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
+#                     ' Your version is '+bokeh.__version__)
 
 
 class Dataexplorer(object):
@@ -880,9 +880,7 @@ def update_filters(active, caller, DatEx):
 
     # Selections would get messed up after the filtering.
     # Force 'empty' selection of rows = deselect everything.
-    DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
-                             '1d': {'indices': []},
-                             '2d': {'indices': {}}}
+    DatEx.source.selected.indices = []
 
     update_CDS(DatEx)  # Update ColumnDataSource to apply the filter_combined
 
@@ -919,7 +917,8 @@ def update_CDS(DatEx):
     DatEx.filter_combined_ri = DatEx.filter_combined.reindex(DatEx.df.index)
 
     # Here we correct the row selection. First we get the current selection
-    source_index_sel_old = DatEx.source.selected['1d']['indices']
+#    source_index_sel_old = DatEx.source.selected['1d']['indices']
+    source_index_sel_old = DatEx.source.selected.indices
 
     if source_index_sel_old == []:
         source_index_sel_new = []  # No selection found, skip the rest
@@ -933,9 +932,7 @@ def update_CDS(DatEx):
 
         # Make selection empty (All glyphs vanish for a moment. Otherwise
         # on updating 'source' the wrong glyphs are selected for a moment.)
-        DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
-                                 '1d': {'indices': [[]]},
-                                 '2d': {'indices': {}}}
+        DatEx.source.selected.indices = []
 
     # Update the 'data' property of the 'source' object with the new data.
     # The new data is formatted with Pandas as a dict of the 'list' type.
@@ -945,9 +942,7 @@ def update_CDS(DatEx):
 
     # Set new row selection
     if source_index_sel_new != []:
-        DatEx.source.selected = {'0d': {'glyph': None, 'indices': []},
-                                 '1d': {'indices': source_index_sel_new},
-                                 '2d': {'indices': {}}}
+        DatEx.source.selected.indices = source_index_sel_new
 
     '''After this step the script is idle until the next user input occurs.'''
 
@@ -1286,9 +1281,7 @@ def update_hm_source_selected(DatEx):
     figs_all_s = pd.Series(range(len(figs_all)), index=figs_all)
     figs_sel = get_combinations(DatEx)
     DatEx.hm_sel_ids = figs_all_s[figs_sel].tolist()
-    DatEx.hm_source.selected = {'0d': {'glyph': None, 'indices': []},
-                                '1d': {'indices': DatEx.hm_sel_ids},
-                                '2d': {'indices': {}}}
+    DatEx.hm_source.selected = Selection(indices=DatEx.hm_sel_ids)
 
 
 def callback_tabs(attr, old, new, DatEx):
