@@ -47,7 +47,7 @@ parser.add_argument('--server_mode', action='store_true',
 parser.add_argument('--bokeh_output_backend', action='store', type=str,
                     dest='output_backend',
                     help='Rendering options are "canvas", "webgl" and "svg"',
-                    default='canvas')
+                    default='webgl')
 
 args = parser.parse_args()
 
