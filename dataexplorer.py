@@ -82,7 +82,7 @@ from bokeh.io import curdoc
 from functools import partial
 from pandas.api.types import is_categorical_dtype, CategoricalDtype
 from bokeh.io import export_png, export_svgs
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
@@ -95,13 +95,13 @@ pd.set_option('display.max_columns', 0)  # Fit number of columns to terminal
 
 # Check some version requirements
 pd_v_required = '0.21.0'
-if StrictVersion(pd.__version__) < StrictVersion(pd_v_required):
+if LooseVersion(pd.__version__) < LooseVersion(pd_v_required):
     logging.critical('Warning: Pandas version '+pd_v_required+' is required.' +
                      ' Your version is '+pd.__version__)
 bk_v_required = '0.12.15'
-#if StrictVersion(bokeh.__version__) < StrictVersion(bk_v_required):
-#    logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
-#                     ' Your version is '+bokeh.__version__)
+if LooseVersion(bokeh.__version__) < LooseVersion(bk_v_required):
+    logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
+                     ' Your version is '+bokeh.__version__)
 
 
 class Dataexplorer(object):
@@ -336,7 +336,6 @@ def create_plots(self):
                           'lasso_select', 'box_select', 'save', 'help'],
                 # 'active_scroll': 'wheel_zoom',
                 'plot_height': self.p_h, 'plot_width': self.p_w,
-                'lod_factor': 1000,  # level-of-detail decimation
                 'output_backend': self.output_backend,
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
