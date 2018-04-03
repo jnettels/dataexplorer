@@ -119,7 +119,7 @@ class Dataexplorer(object):
 
     def __init__(self, df, data_name, server_mode, combinator=0, vals_max=6,
                  window_height=974, window_width=1920,
-                 output_backend='canvas'):
+                 output_backend='webgl'):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -160,6 +160,7 @@ class Dataexplorer(object):
         self.p_w = 250  # global setting for plot_width
         self.load_mode_append = 0  # 0 equals False equals replace
         self.selected_figs = []
+        self.hm_sel_ids = []
         self.window_height = window_height  # Pixels of browser window
         self.window_width = window_width  # Pixels of browser window
         self.output_backend = output_backend
@@ -1279,8 +1280,10 @@ def update_hm_source_selected(DatEx):
     figs_all = list(itertools.product(DatEx.vals_active, repeat=2))
     figs_all_s = pd.Series(range(len(figs_all)), index=figs_all)
     figs_sel = get_combinations(DatEx)
-    DatEx.hm_sel_ids = figs_all_s[figs_sel].tolist()
-    DatEx.hm_source.selected = Selection(indices=DatEx.hm_sel_ids)
+    hm_sel_ids = figs_all_s[figs_sel].tolist()
+    if hm_sel_ids != DatEx.hm_sel_ids:  # Check if update is necessary
+        DatEx.hm_sel_ids = hm_sel_ids
+        DatEx.hm_source.selected = Selection(indices=DatEx.hm_sel_ids)
 
 
 def callback_tabs(attr, old, new, DatEx):
@@ -1354,7 +1357,7 @@ def callback_heatmap(attr, old, new, DatEx):
     Return:
         None
     '''
-    DatEx.hm_sel_ids = new['1d']['indices']
+    DatEx.hm_sel_ids = new.indices
     figs_all = pd.Series(list(itertools.product(DatEx.vals_active, repeat=2)))
     if DatEx.hm_sel_ids == []:  # Happens when clicking the reset button
         DatEx.selected_figs = figs_all
