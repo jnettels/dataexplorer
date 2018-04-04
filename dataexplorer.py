@@ -731,7 +731,7 @@ def create_corr_matrix_heatmap(self):
     # Call a custom function to create a heatmap figure
     self.corr_matrix_heatmap = create_heatmap(corr_matrix, self)
     # Update the selection immediately
-    update_hm_source_selected(self)
+    update_hm_source_selected(self, force=True)
     # Whenever the selection on the matrix changes, this callback happens
     self.hm_source.on_change('selected', partial(callback_heatmap, DatEx=self))
 
@@ -1265,7 +1265,7 @@ def update_combinator(attr, old, new, DatEx):
     DatEx.grid_needs_update = True
 
 
-def update_hm_source_selected(DatEx):
+def update_hm_source_selected(DatEx, force=False):
     '''Update the selection of the heatmap source. We create a Pandas Series
     from the full list of possible selections. We filter it with the currently
     selected figures. The result is a list of the indices that we can pass to
@@ -1274,6 +1274,8 @@ def update_hm_source_selected(DatEx):
     Args:
         DatEx (Dataexplorer): The object containing all the session information
 
+        force (bool, optional): Force update of selection
+
     Returns:
         None
     '''
@@ -1281,7 +1283,7 @@ def update_hm_source_selected(DatEx):
     figs_all_s = pd.Series(range(len(figs_all)), index=figs_all)
     figs_sel = get_combinations(DatEx)
     hm_sel_ids = figs_all_s[figs_sel].tolist()
-    if hm_sel_ids != DatEx.hm_sel_ids:  # Check if update is necessary
+    if hm_sel_ids != DatEx.hm_sel_ids or force is True:  # Is update necessary?
         DatEx.hm_sel_ids = hm_sel_ids
         DatEx.hm_source.selected = Selection(indices=DatEx.hm_sel_ids)
 
