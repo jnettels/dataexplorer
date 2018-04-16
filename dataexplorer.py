@@ -313,6 +313,8 @@ def analyse_dataframe(self):
     update_colours(self)
     # Create the Bokeh ColumnDataSource object from Pandas DataFrame
     self.source = ColumnDataSource(data=df)
+    # Initialize empty selection
+    self.source.selected = Selection(indices=[])
 
     return
 
