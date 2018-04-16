@@ -388,8 +388,10 @@ def create_plots(self):
 
         # Create the actual circle GlyphRenderer
         cr = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
+        # Set the text labels of the axis
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
+        p.yaxis.major_label_orientation = "vertical"
 
         self.fig_list.append(p)
         self.glyph_list.append(cr)
