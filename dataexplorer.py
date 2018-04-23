@@ -343,7 +343,12 @@ def create_plots(self):
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
                  'fill_alpha': 0.2, 'hover_alpha': 1,
-                 'size': self.c_size}
+                 'size': self.c_size,
+                 # Set the properties of glyphs that are not selected
+                 'nonselection_fill_color': 'grey',
+                 'nonselection_fill_alpha': 0.1,
+                 'nonselection_line_color': None,
+                 }
     span_set = {'location': 0, 'line_color': 'grey',
                 'line_dash': 'dashed', 'line_width': 1}
 
