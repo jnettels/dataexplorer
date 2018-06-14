@@ -614,7 +614,7 @@ def create_widgets_2(self):
                     title='Set the plot width in pixels')
     sl_p_w.on_change('value', partial(update_p_w, DatEx=self))
 
-    sl_vals_max = Slider(start=2, end=len(self.vals), step=1,
+    sl_vals_max = Slider(start=1, end=len(self.vals), step=1,
                          value=min(self.vals_max, len(self.vals)),
                          title='Set the maximum number of value columns')
     sl_vals_max.on_change('value', partial(update_vals_max, DatEx=self))
