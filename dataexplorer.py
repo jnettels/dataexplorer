@@ -94,7 +94,7 @@ from helpers import (new_upload_button, create_test_data, create_heatmap,
 pd.set_option('display.max_columns', 0)  # Fit number of columns to terminal
 
 # Check some version requirements
-pd_v_required = '0.21.0'
+pd_v_required = '0.23.0'
 if LooseVersion(pd.__version__) < LooseVersion(pd_v_required):
     logging.critical('Warning: Pandas version '+pd_v_required+' is required.' +
                      ' Your version is '+pd.__version__)
