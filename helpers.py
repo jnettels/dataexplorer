@@ -89,7 +89,7 @@ def create_test_data():
         pd.DataFrame(data=dataB2, index=new_index),
         pd.DataFrame(data=dataC1, index=new_index),
         pd.DataFrame(data=dataC2, index=new_index),
-        ])
+        ], sort=True)
 
     df.index.name = 'Time'
     df.reset_index(level=0, inplace=True)  # Make the index a regular column
