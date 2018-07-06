@@ -36,6 +36,8 @@ is required for the batch file to work.
 
 TODO:
     - Transfer session settings via DatEx.__dict__
+    - Include download button for correlation matrix
+    - Include download for plots
 
 Known issues:
     - Plots fail when Time column includes 'NaT', so those columns are removed
@@ -66,6 +68,7 @@ import os
 import re
 import logging
 import bokeh
+import yaml  # Read YAML configuration files
 from bokeh.layouts import widgetbox, gridplot, layout
 from bokeh.layouts import row
 from bokeh.layouts import column
@@ -146,24 +149,32 @@ class Dataexplorer(object):
         Returns:
             None
         '''
-        self.df = df
+        # Settings that are exposed in the config file:
         self.vals_max = vals_max  # Threshold for number of value columns
-        self.data_name = data_name
         self.server_mode = server_mode
         self.combinator = combinator  # Identifier for combinatoric generator
+        self.circle_size = 5
+        self.p_h = 250  # global setting for plot_height
+        self.p_w = 250  # global setting for plot_width
+        self.load_mode_append = 0  # 0 equals False equals replace
+        self.window_height = window_height  # Pixels of browser window
+        self.window_width = window_width  # Pixels of browser window
+        self.output_backend = output_backend
+        self.palette = get_palette_default()
+        self.export_corr_matrix = False
+
+        if self.server_mode is False:
+            perform_config(self)  # Save or load the config file
+
+        # More elements of 'self' that are not exposed to the config file:
+        self.df = df
+        self.data_name = data_name
+        self.selected_figs = []
+        self.hm_sel_ids = []
         self.grid_needs_update = False
         self.table_needs_update = False
         self.corr_matrix_needs_update = False
         self.classifs_need_update = False
-        self.c_size = 5
-        self.p_h = 250  # global setting for plot_height
-        self.p_w = 250  # global setting for plot_width
-        self.load_mode_append = 0  # 0 equals False equals replace
-        self.selected_figs = []
-        self.hm_sel_ids = []
-        self.window_height = window_height  # Pixels of browser window
-        self.window_width = window_width  # Pixels of browser window
-        self.output_backend = output_backend
 
         # Set classifications, their classes and value column names
         try:
@@ -218,6 +229,44 @@ class Dataexplorer(object):
             columns = self.classifs_active + self.vals_active
 
         return columns
+
+
+def perform_config(self):
+    '''All configuration settings can be accessed by the user if they are
+    running a local server (``server_mode == False``) with the help of a YAML
+    config file. If no config file exists, it is created with the current
+    settings. If it exists, the settings are loaded.
+
+    Args:
+        self (Dataexplorer): The object containing all the session information
+
+    Returns:
+        None
+    '''
+    config_file = './templates/config.yaml'
+    self.colourmap_user = dict()
+
+    config = self.__dict__
+    config['0 Info'] = \
+        ['This is a YAML configuration file for the DataExplorer',
+         'You can use "#" to comment out lines in this file',
+         'To restore the original config, just delete this file and ' +
+         'restart the DataExplorer',
+         'The colours of the palette are defined as hex values. For help see',
+         'https://www.w3schools.com/colors/colors_picker.asp',
+         'With "colourmap_user" you can define individual colours for ' +
+         'specific class names, with priority over the palette']
+
+    if not os.path.exists(config_file):
+        yaml.dump(config, open(config_file, 'w'), default_flow_style=False)
+    else:
+        try:
+            config = yaml.load(open(config_file, 'r'))
+
+            for key, value in config.items():
+                self.__dict__[key] = value
+        except Exception as ex:
+            logging.error(str(ex))
 
 
 def analyse_dataframe(self):
@@ -343,7 +392,7 @@ def create_plots(self):
                 }
     glyph_set = {'color': 'Colours', 'hover_color': 'Colours',
                  'fill_alpha': 0.2, 'hover_alpha': 1,
-                 'size': self.c_size,
+                 'size': self.circle_size,
                  # Set the properties of glyphs that are not selected
                  'nonselection_fill_color': 'grey',
                  'nonselection_fill_alpha': 0.1,
@@ -601,7 +650,7 @@ def create_widgets_2(self):
     tgl_coords.on_click(partial(update_coords, DatEx=self))
 
     # Sliders: Sliders for various settings
-    sl_c_size = Slider(start=1, end=20, step=1, value=self.c_size,
+    sl_c_size = Slider(start=1, end=20, step=1, value=self.circle_size,
                        callback_policy='mouseup',  # Not working in 0.12.13
                        title='Set the size of the scatter points')
     sl_c_size.on_change('value', partial(update_c_size, DatEx=self))
@@ -737,6 +786,16 @@ def create_corr_matrix_heatmap(self):
                                                      ).astype('timedelta64[s]')
     # Calculate the correlation matrix
     corr_matrix = df_filtered.corr(method='pearson')
+    # Export the correlation matrix to Excel
+    if self.export_corr_matrix:
+        path = './export/corr_matrix.xlsx'
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+        try:
+            corr_matrix.to_excel('./export/corr_matrix.xlsx',
+                                 sheet_name=self.data_name[:30])
+        except Exception as ex:
+            logging.error(str(ex))
     # Call a custom function to create a heatmap figure
     self.corr_matrix_heatmap = create_heatmap(corr_matrix, self)
     # Update the selection immediately
@@ -1008,7 +1067,7 @@ def update_colours(DatEx):
     sort_list = [DatEx.colour_classif] + rest  # classifs_active list reordered
 
     # Now sort df and update/create columns
-    colormap = get_colourmap(DatEx.classes_dict[DatEx.colour_classif])
+    colormap = get_colourmap(DatEx, DatEx.classes_dict[DatEx.colour_classif])
     DatEx.df.sort_values(by=sort_list, inplace=True)
     DatEx.df['Legend'] = DatEx.df[DatEx.colour_classif]
     DatEx.df['Colours'] = [colormap[x] for x in DatEx.df[DatEx.colour_classif]]
@@ -1194,9 +1253,9 @@ def update_c_size(attr, old, new, DatEx):
     Returns:
         None
     '''
-    DatEx.c_size = new
+    DatEx.circle_size = new
     for glpyh_renderer in DatEx.glyph_list:
-        glpyh_renderer.glyph.size = DatEx.c_size
+        glpyh_renderer.glyph.size = DatEx.circle_size
 
 
 def update_p_h(attr, old, new, DatEx):
@@ -1455,12 +1514,27 @@ def update_corr_matrix_heatmap(DatEx):
     layout_3.children.append(create_corr_matrix_heatmap(DatEx))
 
 
-def get_colourmap(classes):
+def get_palette_default():
+    '''The default colour palette is Bokeh's "Category20" with one change:
+    The regular colours are made more distinguishable by first using the even,
+    then the odd numbers in the predefined colour palette.
+    '''
+    palette_old = palettes.all_palettes['Category20'][20]
+    palette_new = palettes.all_palettes['Category20'][20]
+    for i, colour in enumerate(palette_old):
+        if i < 10:
+            j = 2*i  # Even numbers
+        else:
+            j = 2*(i-9)-1  # Odd numbers
+        palette_new[i] = palette_new[j]  # overwrite palette_new
+
+    return palette_new
+
+
+def get_colourmap(DatEx, classes):
     '''This function creates a dictionary of classes and their colours. It
     handles the possible exception thrown when the palette is not long enough
-    by appending the colour grey. The regular colours are made more
-    distinguishable by first using the even, then the odd numbers in the
-    predefined colour palette.
+    by appending the colour grey.
 
     Args:
         classes (List) : List of classes.
@@ -1469,18 +1543,17 @@ def get_colourmap(classes):
         colourmap (Dict) : Dictionary of classes and their colours.
     '''
     colourmap = dict()
-    palette = palettes.all_palettes['Category20'][20]
-#    palette = palettes.all_palettes['Spectral'][len(classes)]
-#    palette = palettes.all_palettes['Spectral'][11]
+
     for i, class_ in enumerate(classes):
-        if i < 10:
-            j = 2*i  # Even numbers
-        else:
-            j = 2*(i-9)-1  # Odd numbers
         try:
-            colourmap[class_] = palette[j]
+            colourmap[class_] = DatEx.palette[i]
         except Exception:
             colourmap[class_] = 'grey'
+
+        # Individual classes can be overwritten by the YAML config
+        if class_ in DatEx.colourmap_user:
+            colourmap[class_] = DatEx.colourmap_user[class_]
+
     return colourmap
 
 
@@ -1580,7 +1653,7 @@ def load_file(filepath, DatEx):
             df_old['File'] = [DatEx.data_name]*len(df_old)
 
         # Append (with concatenate) the old and new df, with a new index
-        df = pd.concat([df_old, df_new], ignore_index=True)
+        df = pd.concat([df_old, df_new], ignore_index=True, sort=False)
         try:
             # If there is a column named 'Time', move it to the first position
             df = df.set_index('Time').reset_index()
@@ -1697,6 +1770,7 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
 
     for i, fig in enumerate(export_list):
         out_file = os.path.join(out_folder, str(i)+ftype)
+        logging.info('Exporting '+out_file)
         if ftype == '.png':  # Export as raster graphic
             export_png(fig, filename=out_file)
         elif ftype == '.svg':  # Export as vector graphic
