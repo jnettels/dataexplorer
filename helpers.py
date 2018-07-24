@@ -310,14 +310,15 @@ def create_heatmap(corr_matrix, DatEx):
     matrix_size = min(DatEx.window_height-100, DatEx.window_width-20)
 
     # Create the figure
-    p = figure(title='Correlation coefficient matrix',
+    p = figure(#title='Correlation coefficient matrix',
                x_range=list(corr_matrix.columns),
                y_range=list(reversed(corr_matrix.columns)),
                x_axis_location='above', plot_width=matrix_size,
                plot_height=matrix_size,
                tools='save, pan, wheel_zoom, box_zoom, reset, tap',
                active_drag=None,
-               toolbar_location='below', logo=None)
+               toolbar_location='below', logo=None,
+               name='corr_matrix_heatmap')
 
     p.grid.grid_line_color = None
     p.axis.axis_line_color = None

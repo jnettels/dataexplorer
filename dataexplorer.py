@@ -75,7 +75,7 @@ from bokeh.layouts import column
 from bokeh.models.widgets import CheckboxButtonGroup, Select, CheckboxGroup
 from bokeh.models.widgets import Div, DataTable, TableColumn, DateFormatter
 from bokeh.models.widgets import Panel, Tabs, TextInput, Slider, Toggle
-from bokeh.models.widgets import RadioGroup
+from bokeh.models.widgets import RadioGroup, Button
 from bokeh.models import ColumnDataSource  # , CategoricalColorMapper
 from bokeh.models import CustomJS, HoverTool, Span, Selection
 # from bokeh.models import CDSView, BooleanFilter, GroupFilter
@@ -446,6 +446,7 @@ def create_plots(self):
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
         p.yaxis.major_label_orientation = "vertical"
+        p.name = x_val + '; ' + y_val  # give the plot a name
 
         self.fig_list.append(p)
         self.glyph_list.append(cr)
@@ -485,6 +486,8 @@ def create_plots(self):
         legend_x.outline_line_color = None
 
     legend_top.legend.orientation = 'horizontal'
+    legend_top.name = 'legend_horizontal'
+    legend_bot.name = 'legend_vertical'
 #    self.fig_list.append(legend_bot)  # Bottom legend currently disabled
 
     # Get the number of grid columns from the rounded square root of number of
@@ -519,6 +522,7 @@ def create_plots(self):
 
     self.grid = grid
     self.legend_top = legend_top
+    self.legend_bot = legend_bot
 
     # Link the ranges of the axis with the same description
     link_axis_ranges(self)
@@ -639,6 +643,18 @@ def create_widgets_2(self):
     # Button: Download the current data as a file
     but_download = new_download_button(self)
 
+    # Button: Export the figures as image files
+    if self.server_mode:  # Not available in server mode
+        but_export_png = Div(text='''<div> </div>''', height=1, width=1)
+        but_export_svg = Div(text='''<div> </div>''', height=1, width=1)
+    else:  # Only available locally
+        but_export_png = Button(label='Export .png plots',
+                                button_type='success', width=140)
+        but_export_png.on_click(partial(export_figs, DatEx=self, ftype='.png'))
+        but_export_svg = Button(label='Export .svg plots',
+                                button_type='success', width=140)
+        but_export_svg.on_click(partial(export_figs, DatEx=self, ftype='.svg'))
+
     # RadioGroup: Replace or append current data with new file
     rg_load = RadioGroup(labels=['Replace current data with new file',
                                  'Append new file to current data'],
@@ -708,7 +724,8 @@ def create_widgets_2(self):
     div_space_1 = Div(text='''<div> </div>''', height=1, width=600)  # Empty
 
     # Arrange the positions of widgets by listing them in the desired order
-    self.wb_list_2 = [[but_load_new, rg_load, but_download],
+    self.wb_list_2 = [[but_load_new, rg_load, but_download,
+                       but_export_png, but_export_svg],
                       div_space_1,
                       [sl_c_size, sl_p_h, sl_p_w, tgl_coords],
                       [sl_vals_max, rg_comb, tgl_all_vals],
@@ -1453,17 +1470,17 @@ def update_gridplot(DatEx):
     Returns:
         None
     '''
-    # Create a new grid:
-    grid_new = create_plots(DatEx)
-
-    # Get the old grid and the layout containing it from current document:
-    grid_old = curdoc().roots[0].tabs[0].child.children[2]
-#    grid_old = curdoc().get_model_by_name('plot_grid')  # Does not work
+    # Get the layout from current document:
     layout_1 = curdoc().roots[0].tabs[0].child
 
-    # The children of a layout can be treated like a list:
-    layout_1.children.remove(grid_old)
-    layout_1.children.append(grid_new)
+    # For removing items, the children of a layout can be treated like a list:
+    layout_1.children.remove(DatEx.grid)
+#    layout_1.children.remove(DatEx.legend_top)
+
+    # Create a new grid:
+    create_plots(DatEx)  # This updates DatEx.grid
+#    layout_1.children.append(DatEx.legend_top)  # Currently causes error
+    layout_1.children.append(DatEx.grid)
 
 
 def update_classifs(DatEx):
@@ -1747,35 +1764,59 @@ def run_js_code(js_code):
 
 def export_figs(DatEx, fig_sel=None, ftype='.png'):
     '''Export a specific or all figures to files of a given file type.
+    File type can be ``'.png'`` (raster) or ``'.svg'`` (vector).
+
+    Due to current (Bokeh 0.13.0) limitations in the function export_png,
+    the models we try to export must not be assigned to a document. So during
+    the export, we have to remove the complete user interface from
+    ``curdoc()``. It is replaced with a status message.
 
     Args:
         DatEx (Dataexplorer) : The Dataexplorer object.
 
-        fig_sel (figure, optional) : A Bokeh figure. If None, all figures are
-            exported.
+        fig_sel (figure, optional) : A Bokeh figure. If ``None``, all figures
+        are exported.
 
         ftype (str, optional) : A string defining the file type extension.
+        Options: ``'.png'`` (raster) or ``'.svg'`` (vector).
 
     Returns:
         None
     '''
+    # Create a temporary view during the export process
+    div_temp = Div(text='''<div>Please wait</div>''', width=1000)
+    root_temp = layout(div_temp)
+    curdoc().add_root(root_temp)
+    root_main = curdoc().roots[0]
+    curdoc().remove_root(root_main)  # required for export_png to work
+
     out_folder = os.path.join(os.path.dirname(__file__), 'export')
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
 
     if fig_sel is None:
-        export_list = DatEx.fig_list
+        export_list = [DatEx.legend_top, DatEx.legend_bot,
+                       DatEx.corr_matrix_heatmap] + DatEx.fig_list
     else:
-        export_list = [fig_sel]
+        export_list = [DatEx.legend_top, DatEx.legend_bot,
+                       DatEx.corr_matrix_heatmap] + [fig_sel]
 
     for i, fig in enumerate(export_list):
-        out_file = os.path.join(out_folder, str(i)+ftype)
+        out_file = os.path.join(out_folder, fig.name+ftype)
         logging.info('Exporting '+out_file)
-        if ftype == '.png':  # Export as raster graphic
-            export_png(fig, filename=out_file)
-        elif ftype == '.svg':  # Export as vector graphic
-            fig.output_backend = "svg"
-            export_svgs(fig, filename=out_file)
+        div_temp.text = 'Please wait... exporting '+out_file
+        try:
+            if ftype == '.png':  # Export as raster graphic
+                export_png(fig, filename=out_file)
+            elif ftype == '.svg':  # Export as vector graphic
+                fig.output_backend = "svg"
+                export_svgs(fig, filename=out_file)
+        except Exception as ex:
+            logging.info(str(ex))
+
+    # Restore original view
+    curdoc().add_root(root_main)
+    curdoc().remove_root(root_temp)
 
 
 if __name__ == "__main__":
