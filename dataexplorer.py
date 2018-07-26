@@ -1812,7 +1812,7 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
                 fig.output_backend = "svg"
                 export_svgs(fig, filename=out_file)
         except Exception as ex:
-            logging.info(str(ex))
+            logging.critical(str(ex))
 
     # Restore original view
     curdoc().add_root(root_main)
