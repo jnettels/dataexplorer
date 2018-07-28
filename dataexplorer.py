@@ -243,7 +243,8 @@ def perform_config(self):
     Returns:
         None
     '''
-    config_file = './templates/config.yaml'
+    config_file = os.path.join(os.path.dirname(__file__),
+                               'templates/config.yaml')
     self.colourmap_user = dict()
 
     config = self.__dict__
