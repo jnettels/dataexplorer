@@ -69,6 +69,7 @@ import re
 import logging
 import bokeh
 import yaml  # Read YAML configuration files
+import unicodedata
 from bokeh.layouts import widgetbox, gridplot, layout
 from bokeh.layouts import row
 from bokeh.layouts import column
@@ -1803,7 +1804,11 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
                        DatEx.corr_matrix_heatmap] + [fig_sel]
 
     for i, fig in enumerate(export_list):
-        out_file = os.path.join(out_folder, fig.name+ftype)
+        # Normalize or replace invalid characters ('W/m²' becomes 'W_m2')
+        fig_name = unicodedata.normalize('NFKD', fig.name)  # normalize
+        fig_name = re.sub(r'[\/\:\?\!\<\>\|\*\"]', '_', fig_name)  # replace
+        out_file = os.path.join(out_folder, fig_name+ftype)
+
         logging.info('Exporting '+out_file)
         div_temp.text = 'Please wait... exporting '+out_file
         try:
