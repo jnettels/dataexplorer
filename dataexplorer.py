@@ -806,12 +806,12 @@ def create_corr_matrix_heatmap(self):
     corr_matrix = df_filtered.corr(method='pearson')
     # Export the correlation matrix to Excel
     if self.export_corr_matrix:
-        path = './export/corr_matrix.xlsx'
+        path = os.path.join(os.path.dirname(__file__), 'export',
+                            'corr_matrix.xlsx')
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         try:
-            corr_matrix.to_excel('./export/corr_matrix.xlsx',
-                                 sheet_name=self.data_name[:30])
+            corr_matrix.to_excel(path, sheet_name=self.data_name[:30])
         except Exception as ex:
             logging.error(str(ex))
     # Call a custom function to create a heatmap figure
