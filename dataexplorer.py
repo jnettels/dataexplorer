@@ -352,6 +352,11 @@ def analyse_dataframe(self):
     else:
         vals_active = vals
 
+    if self.combinator == 4 and self.col_time is None:
+        # If combinator 4 'Time series only' was selected in the config, but
+        # the current data has no time column, we must reset the combinator
+        self.combinator = 0
+
     self.vals = vals
     self.classifs = classifs
     self.classes_dict = classes_dict
