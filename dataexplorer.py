@@ -293,6 +293,7 @@ def analyse_dataframe(self):
         # The column contains classes or values
         if df[column_].dtype == object or is_categorical_dtype(df[column_]):
             classifs.append(column_)  # Classification found
+            df[column_] = list(map(str, df[column_]))  # Convert to strings
         elif '!' in column_:
             # column_new = column_.replace('!', '')
             # df.rename(columns={column_: column_new}, inplace=True)
