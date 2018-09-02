@@ -161,7 +161,8 @@ class Dataexplorer(object):
         self.window_height = window_height  # Pixels of browser window
         self.window_width = window_width  # Pixels of browser window
         self.output_backend = output_backend
-        self.palette = get_palette_default()
+        self.palette = get_palette_default()  # List of colors
+        self.palette_large_name = 'plasma'  # Name of large backup palette
         self.export_corr_matrix = False
 
         if self.server_mode is False:
@@ -1551,15 +1552,23 @@ def get_palette_default():
             j = 2*i  # Even numbers
         else:
             j = 2*(i-9)-1  # Odd numbers
-        palette_new[i] = palette_new[j]  # overwrite palette_new
+        palette_new[i] = palette_old[j]  # overwrite palette_new
 
     return palette_new
 
 
 def get_colourmap(DatEx, classes):
-    '''This function creates a dictionary of classes and their colours. It
-    handles the possible exception thrown when the palette is not long enough
-    by appending the colour grey.
+    '''This function creates a dictionary of classes and their colours.
+    It uses the list of colors ``DatEx.palette``, which was either defined by
+    ``get_palette_default()`` or by the user configuration yaml.
+    If the list of classes is longer than the palette, we fall back to a
+    large palette with 256 continuous colors. This can be defined in the
+    config, too. Selectable palette names can be found here:
+
+    https://bokeh.pydata.org/en/latest/docs/reference/palettes.html#large-palettes
+
+    If all fails, the function handles the possible exception thrown when
+    the palette is not long enough by appending the colour grey.
 
     Args:
         classes (List) : List of classes.
@@ -1567,8 +1576,18 @@ def get_colourmap(DatEx, classes):
     Return:
         colourmap (Dict) : Dictionary of classes and their colours.
     '''
-    colourmap = dict()
+    if len(classes) > len(DatEx.palette) and DatEx.palette_large_name:
+        # If necessary, try to use a large palette
+        try:
+            DatEx.palette = getattr(
+                    bokeh.palettes, DatEx.palette_large_name)(len(classes))
+        except Exception as ex:
+            logging.error('There is a problem with the palette "'
+                          + DatEx.palette_large_name + '"...')
+            logging.exception(ex)
 
+    # Map a color to each class
+    colourmap = dict()
     for i, class_ in enumerate(classes):
         try:
             colourmap[class_] = DatEx.palette[i]
