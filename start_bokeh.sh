@@ -13,5 +13,6 @@ nohup /home/pi/berryconda3/bin/bokeh serve /home/pi/dataexplorer \
     --allow-websocket-origin $ip:$port \
     --allow-websocket-origin=dataexplorer.igs.bau.tu-bs.de:$port \
     --port $port --num-procs $N --log-level $loglevel \
+    --websocket-max-message-size 100000000 \
     --args --server_mode \
     > /home/pi/dataexplorer/dataexplorer.log 2>&1 &

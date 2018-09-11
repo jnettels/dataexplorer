@@ -15,7 +15,7 @@ function load_handler(event) {
         // It is assumed that in server mode, the upload limit problem is fixed
     }
     else{
-        if (b64string.length > 10*1000*1000) {
+        if (b64string.length > 100*1000*1000) {
             alert(input.files[0].name+' is '+file_size_MB+'. If the upload '+
             'does not work, please contact an administrator (and/or refer to '+
             'the known issues in dataexplorer.py).');

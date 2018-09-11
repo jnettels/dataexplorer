@@ -26,7 +26,7 @@ echo - For remote access type "%IP%:%port%/dataexplorer" in remote browser.
 rem # Start Bokeh server with enabled remote access and the given log-level
 bokeh serve "%folder%\" --show --allow-websocket-origin localhost:%port% ^
  --allow-websocket-origin %ip%:%port% --port %port% ^
- --log-level %loglevel%
+ --log-level %loglevel% --websocket-max-message-size 100000000
 
 rem # How to add this script to the taskbar:
 rem # Add a shortcut to cmd.exe to the taskbar, then modify its properties:
