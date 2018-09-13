@@ -137,9 +137,13 @@ def new_upload_button(save_path, callback, DatEx, label="Upload file"):
         file_contents = base64.b64decode(b64_contents)
         file_path = os.path.join(save_path, file_name)
 
-        with open(file_path, "wb") as f:
-            f.write(file_contents)
-        logging.debug("New file uploaded: " + file_path)
+        try:
+            with open(file_path, "wb") as f:
+                f.write(file_contents)
+        except Exception as ex:
+            logging.exception(ex)
+        else:
+            logging.debug("New file uploaded: " + file_path)
         callback(file_path, DatEx)
 
     # This 'source' will be filled by the JavaScript callback
