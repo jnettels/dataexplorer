@@ -88,6 +88,11 @@ from pandas.api.types import is_categorical_dtype, CategoricalDtype
 from bokeh.io import export_png, export_svgs
 from distutils.version import LooseVersion
 
+import holoviews as hv
+import holoviews.operation.datashader as hd
+import datashader as ds
+import datashader.transfer_functions as tf
+
 # My own library of functions from the file helpers.py
 from helpers import (new_upload_button, create_test_data, create_heatmap,
                      read_filetypes, new_download_button,
@@ -123,7 +128,7 @@ class Dataexplorer(object):
 
     def __init__(self, df, data_name, server_mode, combinator=0, vals_max=6,
                  window_height=974, window_width=1920,
-                 output_backend='webgl'):
+                 output_backend='webgl', render_mode='Bokeh'):
         '''Return a Dataexplorer object, the object containing all the session
         information. Initialize all object properties.
         Perform all the tasks necessary to create the Data Explorer user
@@ -153,6 +158,7 @@ class Dataexplorer(object):
         # Settings that are exposed in the config file:
         self.vals_max = vals_max  # Threshold for number of value columns
         self.server_mode = server_mode
+        self.render_mode = render_mode
         self.combinator = combinator  # Identifier for combinatoric generator
         self.circle_size = 5
         self.p_h = 250  # global setting for plot_height
@@ -164,6 +170,7 @@ class Dataexplorer(object):
         self.palette = get_palette_default()  # List of colors
         self.palette_large_name = 'plasma'  # Name of large backup palette
         self.export_corr_matrix = False
+        self.HoverTool_enable = True
 
         if self.server_mode is False:
             perform_config(self)  # Save or load the config file
@@ -396,6 +403,7 @@ def create_plots(self):
     plot_set = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
                           'lasso_select', 'box_select', 'save', 'help'],
                 # 'active_scroll': 'wheel_zoom',
+#                'active_inspect': None,
                 'plot_height': self.p_h, 'plot_width': self.p_w,
                 'output_backend': self.output_backend,
                 }
@@ -415,6 +423,7 @@ def create_plots(self):
     self.fig_list = []  # List with the complete figures
     self.glyph_list = []  # List of GlyphRenderers
     self.span_list = []  # List of spans (coordinate center lines)
+    self.cvs_list = []  # List of DataShadar canvases
 
     for x_val, y_val in self.selected_figs:
         # Is x_axis or y_axis of data type 'datetime'?
@@ -449,23 +458,112 @@ def create_plots(self):
             tips_list.append([x_val, '@{'+x_val+'}'])
             tips_list.append([y_val, '@{'+y_val+'}'])
 
-        # Create the actual circle GlyphRenderer
-        cr = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
         # Set the text labels of the axis
         p.xaxis.axis_label = x_val
         p.yaxis.axis_label = y_val
         p.yaxis.major_label_orientation = "vertical"
         p.name = x_val + '; ' + y_val  # give the plot a name
 
-        self.fig_list.append(p)
-        self.glyph_list.append(cr)
+        if self.render_mode == 'Bokeh':
+            # Create the actual circle GlyphRenderer
+            cr = p.circle(x=x_val, y=y_val, source=self.source, **glyph_set)
+            self.glyph_list.append(cr)
 
-        # Create HoverTool:
-        hover = HoverTool(point_policy='follow_mouse',  # 'snap_to_data',
-                          tooltips=tips_list,
-                          renderers=[cr],  # Uses 'hover_*' options
-                          formatters=formatters_dict)
-        p.add_tools(hover)
+            # Create HoverTool:
+            hover = HoverTool(point_policy='follow_mouse',  # 'snap_to_data',
+                              tooltips=tips_list,
+                              renderers=[cr],  # Uses 'hover_*' options
+                              formatters=formatters_dict)
+            if self.HoverTool_enable:
+                p.add_tools(hover)  # Not enabling hover boosts performance
+
+        if self.render_mode == 'HoloViews':
+            # HoloViews
+#            hv.extension('bokeh')
+#            points = hv.Scatter(self.df, kdims=[x_val, y_val])
+            points = hv.Points(self.df, kdims=[x_val, y_val])
+
+#            dataset = hv.Dataset(self.df)
+#            points = dataset.to(hv.Points, [x_val, y_val],
+#                                groupby='Legend').overlay()
+#            points.opts({'Points': plot_set})
+#            points = hd.datashade(points)
+            points = hd.datashade(points, aggregator=ds.count_cat('Legend'))
+
+            # BUG: The return of dynspread cannot be retrieved with get_plot
+#            points = hd.dynspread(points, threshold=0.50, how='over')
+
+            renderer = hv.renderer('bokeh').instance(mode='server')
+            hvplot = renderer.get_plot(points, curdoc())
+#            hvplot = hv.plotting.bokeh.BokehRenderer.get_plot(points)
+#            hvplot.set_param(tools=['lasso_select'])
+            p = hvplot.state
+#            p = points
+#            cr = p.renderers[6]
+#            print(cr)
+
+        if self.render_mode == 'DataShader':
+            df_copy = self.df.copy()
+
+            # Prepare the axis ranges, converting DateTime to float
+            ref = pd.datetime(1970, 1, 1, 00, 00, 00)
+            if self.df[x_val].dtype == 'datetime64[ns]':
+                df_copy[x_val] = (df_copy[x_val] - ref)/np.timedelta64(1, 'ms')
+            if self.df[y_val].dtype == 'datetime64[ns]':
+                df_copy[y_val] = (df_copy[y_val] - ref)/np.timedelta64(1, 'ms')
+
+            x_range = [df_copy[x_val].min(), df_copy[x_val].max()]
+            y_range = [df_copy[y_val].min(), df_copy[y_val].max()]
+
+            # Contruct the DataShader image
+            cvs = ds.Canvas(plot_width=self.p_w, plot_height=self.p_h,
+                            x_range=x_range, y_range=y_range)
+            self.cvs_list.append(cvs)
+
+            try:
+                agg = cvs.points(df_copy, x_val, y_val,
+                                 agg=ds.count_cat('Legend'))
+                img = tf.shade(agg, color_key=self.colormap, how='eq_hist',
+                               min_alpha=165)
+                img = tf.dynspread(img, threshold=0.99)
+                p.image_rgba(image=[img.data], x=x_range[0], y=y_range[0],
+                             dw=x_range[1]-x_range[0],
+                             dh=y_range[1]-y_range[0])
+                p.x_range.start = x_range[0]
+                p.x_range.end = x_range[1]
+                p.y_range.start = y_range[0]
+                p.y_range.end = y_range[1]
+
+            except ValueError and ZeroDivisionError as ex:
+                logging.error(ex)
+                p.image_rgba(image=[], x=x_range[0], y=y_range[0],
+                             dw=x_range[1]-x_range[0],
+                             dh=y_range[1]-y_range[0])
+                p.x_range.start = None
+                p.x_range.end = None
+                p.y_range.start = None
+                p.y_range.end = None
+                pass
+            except Exception as ex:
+                logging.exception(ex)
+                p.image_rgba(image=[], x=[0, 1], y=[0, 1], dw=1, dh=1)
+                pass
+
+
+        # Testing: Allow zooming in datashader
+#        print(p.x_range.start)
+#        p.on_change('x_range', datashader_callback)
+#        print(p.__dict__)
+#        p.x_range.on_change('start', partial(datashader_callback, p=p, DatEx=self, x_val=x_val, y_val=y_val))
+#        p.x_range.on_change('end', partial(datashader_callback, p=p, DatEx=self, x_val=x_val, y_val=y_val))
+#        p.y_range.on_change('start', partial(datashader_callback, p=p, DatEx=self, x_val=x_val, y_val=y_val))
+#        p.y_range.on_change('end', partial(datashader_callback, p=p, DatEx=self, x_val=x_val, y_val=y_val))
+#        print(p.x_range.__dict__)
+#        p = update_datashader(self, p, x_val, y_val)
+#        break
+
+        # Add figure to list of all figures
+        self.fig_list.append(p)
 
         # Add horizontal and vertical lines in the center coordinates
         span_h = Span(**span_set, dimension='height', level='underlay')
@@ -474,6 +572,16 @@ def create_plots(self):
         self.span_list.append(span_w)
         p.add_layout(span_h)
         p.add_layout(span_w)
+
+#        # DataShader
+#        def image_callback(x_range, y_range, w, h):
+#            cvs = ds.Canvas(plot_width=w, plot_height=h,
+#                            x_range=x_range, y_range=y_range)
+#            agg = cvs.points(self.df, x_val, y_val, ds.count_cat('Legend'))
+#            img = tf.shade(agg)
+#            return tf.dynspread(img, threshold=0.80)
+#
+#        ds.bokeh_ext.InteractiveImage(p, image_callback)
 
     '''
     The plots are completed, now we add two figures for the legends that go to
@@ -1040,6 +1148,13 @@ def update_CDS(DatEx):
 
     '''After this step the script is idle until the next user input occurs.'''
 
+    # ... unless we are in DataShader render mode:
+    if DatEx.render_mode == 'DataShader':
+        for i, x_y_vals in enumerate(DatEx.selected_figs):
+            x_val, y_val = x_y_vals
+
+            update_datashader(DatEx, i, x_val, y_val)
+
 
 def update_colour_classif(attr, old, new, DatEx):
     '''Function associated with drop-down menu widget for the classification
@@ -1097,7 +1212,7 @@ def update_colours(DatEx):
     DatEx.df.sort_values(by=sort_list, inplace=True)
     DatEx.df['Legend'] = DatEx.df[DatEx.colour_classif]
     DatEx.df['Colours'] = [colormap[x] for x in DatEx.df[DatEx.colour_classif]]
-
+    DatEx.colormap = colormap
     return
 
 
@@ -1708,7 +1823,8 @@ def load_file(filepath, DatEx):
     '''Start the recreation of the UI by creating a new Dataexplorer object'''
     DatEx = Dataexplorer(df, data_name, DatEx.server_mode,
                          window_height=DatEx.window_height,
-                         window_width=DatEx.window_width)
+                         window_width=DatEx.window_width,
+                         render_mode=DatEx.render_mode)
     # (The script is basically restarted at this point)
 
 
@@ -1848,6 +1964,72 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
     # Restore original view
     curdoc().add_root(root_main)
     curdoc().remove_root(root_temp)
+
+
+def update_datashader(DatEx, i, x_val, y_val):
+    p = DatEx.fig_list[i]
+    df_copy = DatEx.df[DatEx.filter_combined_ri].copy()
+
+    # Prepare the axis ranges, converting DateTime to float
+    ref = pd.datetime(1970, 1, 1, 00, 00, 00)
+    if DatEx.df[x_val].dtype == 'datetime64[ns]':
+        df_copy[x_val] = (df_copy[x_val] - ref)/np.timedelta64(1, 'ms')
+    if DatEx.df[y_val].dtype == 'datetime64[ns]':
+        df_copy[y_val] = (df_copy[y_val] - ref)/np.timedelta64(1, 'ms')
+
+#    x_range = [df_copy[x_val].min(), df_copy[x_val].max()]
+#    y_range = [df_copy[y_val].min(), df_copy[y_val].max()]
+
+    # Contruct the DataShader image
+    cvs = DatEx.cvs_list[i]
+    try:
+        # Will fail if plot would be empty
+        agg = cvs.points(df_copy, x_val, y_val,
+                         agg=ds.count_cat('Legend'))
+        img = tf.shade(agg, color_key=DatEx.colormap, how='eq_hist',
+                       min_alpha=165)
+        img = tf.dynspread(img, threshold=0.99)
+        # Replace only the image array in the plots DataSource
+        p.renderers[7].data_source.data['image'] = [img.data]
+    except ZeroDivisionError as ex:
+        logging.error(ex)
+        # Create an empty plot
+        p.renderers[7].data_source.data['image'] = []
+        pass
+    except Exception as ex:
+        logging.exception(ex)
+        # Create an empty plot
+        print(p.name)  # TODO remove after testing
+        print(p.renderers)  # TODO remove after testing
+        pass
+
+#    p.x_range.start = x_range[0]
+#    p.x_range.end = x_range[1]
+#    p.y_range.start = y_range[0]
+#    p.y_range.end = y_range[1]
+
+    return p
+
+
+def datashader_callback(attr, old, new, p, DatEx, x_val, y_val):
+    '''Not working properly yet (is supposed to allow redrawing the image
+    when zooming)
+    '''
+#    print(p, attr, old, new)
+    df_copy = DatEx.df[DatEx.filter_combined_ri].copy()
+    x_range = [p.x_range.start, p.x_range.end]
+    y_range = [p.y_range.start, p.y_range.end]
+    print(x_range, y_range)
+    cvs = ds.Canvas(plot_width=DatEx.p_w, plot_height=DatEx.p_h,
+                    x_range=x_range, y_range=y_range)
+    agg = cvs.points(df_copy, x_val, y_val, agg=ds.count_cat('Legend'))
+    img = tf.shade(agg, color_key=DatEx.colormap, how='eq_hist')
+    img = tf.dynspread(img, threshold=0.75)
+    print(img.data)
+    p.renderers[7].data_source.data['image'] = [img.data]
+#    p.image_rgba(image=[img.data], x=p.x_range[0], y=p.y_range[0],
+#                 dw=p.x_range[1]-p.x_range[0],
+#                 dh=p.y_range[1]-p.y_range[0])
 
 
 if __name__ == "__main__":
