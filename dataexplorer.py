@@ -169,6 +169,7 @@ class Dataexplorer(object):
         self.output_backend = output_backend
         self.palette = get_palette_default()  # List of colors
         self.palette_large_name = 'plasma'  # Name of large backup palette
+        self.colourmap_user = dict()
         self.export_corr_matrix = False
         self.HoverTool_enable = True
 
@@ -254,7 +255,6 @@ def perform_config(self):
     '''
     config_file = os.path.join(os.path.dirname(__file__),
                                'templates/config.yaml')
-    self.colourmap_user = dict()
 
     config = self.__dict__
     config['0 Info'] = \
