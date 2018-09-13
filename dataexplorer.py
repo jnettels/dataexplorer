@@ -170,6 +170,7 @@ class Dataexplorer(object):
         self.palette = get_palette_default()  # List of colors
         self.palette_large_name = 'plasma'  # Name of large backup palette
         self.export_corr_matrix = False
+        self.HoverTool_enable = True
 
         if self.server_mode is False:
             perform_config(self)  # Save or load the config file
@@ -473,7 +474,8 @@ def create_plots(self):
                               tooltips=tips_list,
                               renderers=[cr],  # Uses 'hover_*' options
                               formatters=formatters_dict)
-            p.add_tools(hover)  # Not enabling hover boosts performance
+            if self.HoverTool_enable:
+                p.add_tools(hover)  # Not enabling hover boosts performance
 
         if self.render_mode == 'HoloViews':
             # HoloViews
