@@ -88,6 +88,8 @@ from pandas.api.types import is_categorical_dtype, CategoricalDtype
 from bokeh.io import export_png, export_svgs
 from distutils.version import LooseVersion
 
+import holoviews as hv
+import holoviews.operation.datashader as hd
 import datashader as ds
 import datashader.transfer_functions as tf
 
@@ -400,6 +402,7 @@ def create_plots(self):
     plot_set = {'tools': ['pan', 'wheel_zoom', 'box_zoom', 'reset',
                           'lasso_select', 'box_select', 'save', 'help'],
                 # 'active_scroll': 'wheel_zoom',
+#                'active_inspect': None,
                 'plot_height': self.p_h, 'plot_width': self.p_w,
                 'output_backend': self.output_backend,
                 }
@@ -470,7 +473,32 @@ def create_plots(self):
                               tooltips=tips_list,
                               renderers=[cr],  # Uses 'hover_*' options
                               formatters=formatters_dict)
-            p.add_tools(hover)
+            p.add_tools(hover)  # Not enabling hover boosts performance
+
+        if self.render_mode == 'HoloViews':
+            # HoloViews
+#            hv.extension('bokeh')
+#            points = hv.Scatter(self.df, kdims=[x_val, y_val])
+            points = hv.Points(self.df, kdims=[x_val, y_val])
+
+#            dataset = hv.Dataset(self.df)
+#            points = dataset.to(hv.Points, [x_val, y_val],
+#                                groupby='Legend').overlay()
+#            points.opts({'Points': plot_set})
+#            points = hd.datashade(points)
+            points = hd.datashade(points, aggregator=ds.count_cat('Legend'))
+
+            # BUG: The return of dynspread cannot be retrieved with get_plot
+#            points = hd.dynspread(points, threshold=0.50, how='over')
+
+            renderer = hv.renderer('bokeh').instance(mode='server')
+            hvplot = renderer.get_plot(points, curdoc())
+#            hvplot = hv.plotting.bokeh.BokehRenderer.get_plot(points)
+#            hvplot.set_param(tools=['lasso_select'])
+            p = hvplot.state
+#            p = points
+#            cr = p.renderers[6]
+#            print(cr)
 
         if self.render_mode == 'DataShader':
             df_copy = self.df.copy()
@@ -489,11 +517,13 @@ def create_plots(self):
             cvs = ds.Canvas(plot_width=self.p_w, plot_height=self.p_h,
                             x_range=x_range, y_range=y_range)
             self.cvs_list.append(cvs)
+
             try:
                 agg = cvs.points(df_copy, x_val, y_val,
                                  agg=ds.count_cat('Legend'))
-                img = tf.shade(agg, color_key=self.colormap, how='eq_hist')
-                img = tf.dynspread(img, threshold=0.75)
+                img = tf.shade(agg, color_key=self.colormap, how='eq_hist',
+                               min_alpha=165)
+                img = tf.dynspread(img, threshold=0.99)
                 p.image_rgba(image=[img.data], x=x_range[0], y=y_range[0],
                              dw=x_range[1]-x_range[0],
                              dh=y_range[1]-y_range[0])
@@ -501,8 +531,9 @@ def create_plots(self):
                 p.x_range.end = x_range[1]
                 p.y_range.start = y_range[0]
                 p.y_range.end = y_range[1]
-            except ValueError as ex:
-                print(ex)
+
+            except ValueError and ZeroDivisionError as ex:
+                logging.error(ex)
                 p.image_rgba(image=[], x=x_range[0], y=y_range[0],
                              dw=x_range[1]-x_range[0],
                              dh=y_range[1]-y_range[0])
@@ -511,6 +542,11 @@ def create_plots(self):
                 p.y_range.start = None
                 p.y_range.end = None
                 pass
+            except Exception as ex:
+                logging.exception(ex)
+                p.image_rgba(image=[], x=[0, 1], y=[0, 1], dw=1, dh=1)
+                pass
+
 
         # Testing: Allow zooming in datashader
 #        print(p.x_range.start)
@@ -1948,13 +1984,21 @@ def update_datashader(DatEx, i, x_val, y_val):
         # Will fail if plot would be empty
         agg = cvs.points(df_copy, x_val, y_val,
                          agg=ds.count_cat('Legend'))
-        img = tf.shade(agg, color_key=DatEx.colormap, how='eq_hist')
-        img = tf.dynspread(img, threshold=0.75)
+        img = tf.shade(agg, color_key=DatEx.colormap, how='eq_hist',
+                       min_alpha=165)
+        img = tf.dynspread(img, threshold=0.99)
         # Replace only the image array in the plots DataSource
         p.renderers[7].data_source.data['image'] = [img.data]
-    except ValueError:
+    except ZeroDivisionError as ex:
+        logging.error(ex)
         # Create an empty plot
         p.renderers[7].data_source.data['image'] = []
+        pass
+    except Exception as ex:
+        logging.exception(ex)
+        # Create an empty plot
+        print(p.name)  # TODO remove after testing
+        print(p.renderers)  # TODO remove after testing
         pass
 
 #    p.x_range.start = x_range[0]
