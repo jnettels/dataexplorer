@@ -14,7 +14,7 @@ if not defined port set port=80
 rem # Read command line option #2 as log-level (default is 'critical'):
 rem # 'log-level' can be one of: trace, debug, info, warning, error or critical
 set loglevel=%2
-if not defined loglevel set loglevel=critical
+if not defined loglevel set loglevel=warning
 
 rem # The full path to the batch file's directory
 set "folder=%~dp0"
