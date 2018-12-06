@@ -4,7 +4,7 @@
 // formatted as a dictionary:
 var filename = source.data['filename'][0];
 var filetext = source.data['filetext'][0];
-var filetype = source.data['filetext'][0];
+var filetype = source.data['filetype'][0];
 // Create the 'blob' that can be downloaded:
 var blob = new Blob([filetext], { type: filetype });
 
