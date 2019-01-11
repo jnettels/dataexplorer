@@ -107,7 +107,7 @@ pd_v_required = '0.23.0'
 if LooseVersion(pd.__version__) < LooseVersion(pd_v_required):
     logging.critical('Warning: Pandas version '+pd_v_required+' is required.' +
                      ' Your version is '+pd.__version__)
-bk_v_required = '0.12.15'
+bk_v_required = '1.0.1'
 if LooseVersion(bokeh.__version__) < LooseVersion(bk_v_required):
     logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
                      ' Your version is '+bokeh.__version__)
@@ -168,7 +168,7 @@ class Dataexplorer(object):
         self.window_width = window_width  # Pixels of browser window
         self.output_backend = output_backend
         self.palette = get_palette_default()  # List of colors
-        self.palette_large_name = 'plasma'  # Name of large backup palette
+        self.palette_large_name = False  # Large backup palette, e.g. 'plasma'
         self.colourmap_user = dict()
         self.export_corr_matrix = False
         self.HoverTool_enable = True
@@ -1926,12 +1926,13 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
     Returns:
         None
     '''
+    toggle_loading_mouse(True)  # Enable spinning mouse wheel
     # Create a temporary view during the export process
     div_temp = Div(text='''<div>Please wait</div>''', width=1000)
     root_temp = layout(div_temp)
     curdoc().add_root(root_temp)
-    root_main = curdoc().roots[0]
-    curdoc().remove_root(root_main)  # required for export_png to work
+#    root_main = curdoc().roots[0]  # bokeh < 1.0.0: required for export_png
+#    curdoc().remove_root(root_main)  # bokeh < 1.0.0: required for export_png
 
     out_folder = os.path.join(os.path.dirname(__file__), 'export')
     if not os.path.exists(out_folder):
@@ -1962,8 +1963,9 @@ def export_figs(DatEx, fig_sel=None, ftype='.png'):
             logging.critical(str(ex))
 
     # Restore original view
-    curdoc().add_root(root_main)
+#    curdoc().add_root(root_main)  # bokeh < 1.0.0: required for export_png
     curdoc().remove_root(root_temp)
+    toggle_loading_mouse(False)  # Disable spinning mouse wheel
 
 
 def update_datashader(DatEx, i, x_val, y_val):
