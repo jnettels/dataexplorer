@@ -367,11 +367,49 @@ def create_heatmap(corr_matrix, DatEx):
 def read_filetypes(filepath):
     '''Read any file type with stored data and return the Pandas DataFrame.
     Wrapper around Pandas' read_excel() and the local read_csv_formats().
+
+    For Excel files, missing values (empty cells) are allowed and normally
+    filled with ``NaN``.
+    However: If all but the first cells of a row are empty, we try to create
+    a multiindex from the headers in the rows above that one.
+    This should match the structure created when saving a multiindex DataFrame
+    with ``pd.DataFrame.to_excel()``.
+
+    ================  ======  ======  ======  ======
+    Classification 1  A               B
+    Classification 2  First   Second  First   Second
+    Time
+    00:00             0       100     5       110
+    00:15             1       90      4       120
+    00:30             2       80      5       115
+    00:45             1       70      7       110
+    ================  ======  ======  ======  ======
     '''
     filetype = os.path.splitext(os.path.basename(filepath))[1]
     if filetype in ['.xlsx', '.xls']:
         # Excel can be read automatically with Pandas
         df_new = pd.read_excel(filepath)
+
+        # Find all rows with missing values
+        rows_with_NaN = df_new.isnull().any(axis=1)
+        # Try to find the headers of a multiindex
+        header_rows = []  # Default: No multiindex
+        for i in df_new[rows_with_NaN].index:
+            row = df_new.loc[i, :]
+            # The last row of the multindex is defined as one where all cells
+            # (except the first one) contain NaN.
+            if row[1:].isnull().all():
+                header_rows = list(range(0, i + 1))
+
+        # If we assume there is a multiindex, try again to read the Excel file
+        # Then we flatten that index by stacking and reordering.
+        if len(header_rows) is not 0:
+            df_new = pd.read_excel(filepath, header=[header_rows], index_col=0)
+            df_new = df_new.stack(level=header_rows[:-1])
+            df_new = df_new.reorder_levels(header_rows[1:]+[header_rows[0]])
+            df_new = df_new.sort_index()
+            df_new.reset_index(inplace=True)
+
     elif filetype in ['.csv']:
         # csv files can have different formats
         df_new = read_csv_formats(filepath)  # My own wrapper around Pandas
