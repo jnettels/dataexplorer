@@ -271,7 +271,7 @@ def perform_config(self):
         yaml.dump(config, open(config_file, 'w'), default_flow_style=False)
     else:
         try:
-            config = yaml.load(open(config_file, 'r'))
+            config = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
 
             for key, value in config.items():
                 self.__dict__[key] = value
