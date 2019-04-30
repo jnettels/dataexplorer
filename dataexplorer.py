@@ -693,7 +693,7 @@ def create_widgets_1(self):
         classes = self.classes_dict[classif]  # Classes in a classification
         active_list = list(range(0, len(classes)))  # All classes start active
         cbg = CheckboxButtonGroup(labels=classes, active=active_list,
-                                  width=self.window_width-(250+300+50))
+                                  width=self.window_width-(250+300+75))
         cbg_list.append(cbg)
 
         # Make the annotation for the CheckboxButtonGroup:
@@ -766,10 +766,10 @@ def create_widgets_2(self):
         but_export_svg = Div(text='''<div> </div>''', height=1, width=1)
     else:  # Only available locally
         but_export_png = Button(label='Export .png plots',
-                                button_type='success', width=140)
+                                button_type='success', width=145)
         but_export_png.on_click(partial(export_figs, DatEx=self, ftype='.png'))
         but_export_svg = Button(label='Export .svg plots',
-                                button_type='success', width=140)
+                                button_type='success', width=145)
         but_export_svg.on_click(partial(export_figs, DatEx=self, ftype='.svg'))
 
     # RadioGroup: Replace or append current data with new file
@@ -802,7 +802,7 @@ def create_widgets_2(self):
     sl_vals_max.on_change('value', partial(update_vals_max, DatEx=self))
 
     # RadioGroup: Single choice list for combinator generator
-    rg_comb = RadioGroup(active=self.combinator, labels=['']*3, width=600)
+    rg_comb = RadioGroup(active=self.combinator, labels=['']*3, width=610)
     rg_comb.on_change('active', partial(update_combinator, DatEx=self))
     self.rg_comb = rg_comb
     update_rg_comb(self)  # Set the actual label text of rg_comb
@@ -916,8 +916,10 @@ def create_corr_matrix_heatmap(self):
     # Convert the datetime column to seconds to allow calculating correlations
     if self.col_time is not None and self.col_time in self.vals_active:
         # This only works if there is a time column and it is selected
-        df_filtered[self.col_time] = pd.to_timedelta(df_filtered[self.col_time]
-                                                     ).astype('timedelta64[s]')
+        df_filtered[self.col_time] = (df_filtered[self.col_time]
+                                      - df_filtered[self.col_time][0]
+                                      ).astype('timedelta64[s]')
+
     # Calculate the correlation matrix
     corr_matrix = df_filtered.corr(method='pearson')
     # Export the correlation matrix to Excel
@@ -932,15 +934,17 @@ def create_corr_matrix_heatmap(self):
             logging.error(str(ex))
     # Call a custom function to create a heatmap figure
     self.corr_matrix_heatmap = create_heatmap(corr_matrix, self)
+
     # Update the selection immediately
     update_hm_source_selected(self, force=True)
     # Whenever the selection on the matrix changes, this callback happens
-    self.hm_source.on_change('selected', partial(callback_heatmap, DatEx=self))
+    self.hm_source.selected.on_change('indices',
+                                      partial(callback_heatmap, DatEx=self))
 
     return self.corr_matrix_heatmap
 
 
-def create_info_tab():
+def create_info_tab(self):
     '''Deliver the information text for the "Info" tab.
     Returns a widgetbox containing a html div created from the contents
     of the "info.html" template file.
@@ -955,7 +959,8 @@ def create_info_tab():
     with open(f_path, 'r') as f:
         info_text = f.read()
 
-    div = Div(text=info_text, width=800)
+    div = Div(text=info_text, width=800, height=self.window_height-60)
+    div.css_classes = ['scrollable']
     return widgetbox(div)
 
 
@@ -980,7 +985,7 @@ def create_layout(self):
     layout_2 = layout(self.data_table)
     layout_3 = layout(self.corr_matrix_heatmap)
     layout_4 = layout(self.wb_list_2)
-    layout_5 = layout(create_info_tab())
+    layout_5 = layout(create_info_tab(self))
 
     tab_1 = Panel(child=layout_1, title='Scatters')
     tab_2 = Panel(child=layout_2, title='Data Table')
@@ -1494,7 +1499,7 @@ def update_hm_source_selected(DatEx, force=False):
     hm_sel_ids = figs_all_s[figs_sel].tolist()
     if hm_sel_ids != DatEx.hm_sel_ids or force is True:  # Is update necessary?
         DatEx.hm_sel_ids = hm_sel_ids
-        DatEx.hm_source.selected = Selection(indices=DatEx.hm_sel_ids)
+        DatEx.hm_source.selected.indices = DatEx.hm_sel_ids
 
 
 def callback_tabs(attr, old, new, DatEx):
@@ -1568,7 +1573,7 @@ def callback_heatmap(attr, old, new, DatEx):
     Return:
         None
     '''
-    DatEx.hm_sel_ids = new.indices
+    DatEx.hm_sel_ids = new
     figs_all = pd.Series(list(itertools.product(DatEx.vals_active, repeat=2)))
     if DatEx.hm_sel_ids == []:  # Happens when clicking the reset button
         DatEx.selected_figs = figs_all
