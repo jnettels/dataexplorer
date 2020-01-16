@@ -107,7 +107,7 @@ pd_v_required = '0.23.0'
 if LooseVersion(pd.__version__) < LooseVersion(pd_v_required):
     logging.critical('Warning: Pandas version '+pd_v_required+' is required.' +
                      ' Your version is '+pd.__version__)
-bk_v_required = '1.0.1'
+bk_v_required = '1.4.0'
 if LooseVersion(bokeh.__version__) < LooseVersion(bk_v_required):
     logging.critical('Warning: Bokeh version '+bk_v_required+' is required.' +
                      ' Your version is '+bokeh.__version__)
@@ -594,7 +594,7 @@ def create_plots(self):
 
     for legend_x in [legend_top, legend_bot]:
         legend_x.circle(x=self.vals[0], y=self.vals[1], source=self.source,
-                        **glyph_set, legend='Legend', visible=False)
+                        **glyph_set, legend_field='Legend', visible=False)
         legend_x.toolbar_location = None
         legend_x.legend.location = 'top_left'
         legend_x.legend.margin = 0
@@ -818,7 +818,8 @@ def create_widgets_2(self):
                    Select the value columns used in the plots:
                    </div>''', height=15, width=600)
     active_list = list(range(0, min(len(self.vals), self.vals_max)))
-    cg_vals = CheckboxGroup(labels=self.vals, active=active_list)
+    cg_vals = CheckboxGroup(labels=self.vals, active=active_list,
+                            sizing_mode='stretch_both')
     cg_vals.on_change('active', partial(update_vals_active, DatEx=self))
     cg_vals_col = column(cg_vals, sizing_mode='fixed', width=600,
                          height=scroll_height, css_classes=['scrollable'])
@@ -829,7 +830,8 @@ def create_widgets_2(self):
                        Select the classifications used in the plots:
                        </div>''', height=15, width=600)
     active_list = list(range(0, len(self.classifs)))
-    cg_classifs = CheckboxGroup(labels=self.classifs, active=active_list)
+    cg_classifs = CheckboxGroup(labels=self.classifs, active=active_list,
+                                sizing_mode='stretch_both')
     cg_classifs.on_change('active', partial(update_classifs_active,
                                             DatEx=self))
     cg_classifs_col = column(cg_classifs, sizing_mode='fixed', width=600,
