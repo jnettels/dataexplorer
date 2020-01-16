@@ -403,7 +403,7 @@ def read_filetypes(filepath):
 
         # If we assume there is a multiindex, try again to read the Excel file
         # Then we flatten that index by stacking and reordering.
-        if len(header_rows) is not 0:
+        if len(header_rows) != 0:
             df_new = pd.read_excel(filepath, header=[header_rows], index_col=0)
             df_new = df_new.stack(level=header_rows[:-1])
             df_new = df_new.reorder_levels(header_rows[1:]+[header_rows[0]])
