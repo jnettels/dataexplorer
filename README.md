@@ -33,6 +33,12 @@ During installation, please allow to add variables to `$PATH` (or do that
 manually afterwards). This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
+After installation of `Anaconda`, you will need to install the required
+Python dependencies, most importantly `Bokeh`, the package on which
+DataExplorer is built. Please refer to the GitHub
+[action workflow](https://github.com/jnettels/dataexplorer/blob/master/.github/workflows/test_install.yml)
+where all required dependencies are listed and tested automatically.
+
 ### Who do I talk to? ###
 
 If in trouble, contact Joris Nettelstroth
