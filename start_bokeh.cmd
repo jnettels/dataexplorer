@@ -24,7 +24,7 @@ echo - For local access type "localhost:%port%/dataexplorer" in local browser.
 echo - For remote access type "%IP%:%port%/dataexplorer" in remote browser.
 
 rem # Start Bokeh server with enabled remote access and the given log-level
-bokeh serve "%folder%\" --show --allow-websocket-origin localhost:%port% ^
+bokeh serve "%folder:~0,-1%" --show --allow-websocket-origin localhost:%port% ^
  --allow-websocket-origin %ip%:%port% --port %port% ^
  --log-level %loglevel% --websocket-max-message-size 100000000
 
