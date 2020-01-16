@@ -1,0 +1,48 @@
+name: Test install
+
+on: [push, pull_request]
+
+jobs:        
+  job_1:
+    runs-on: ${{ matrix.os }}
+    name: Build
+    strategy:
+      matrix:
+        os: [ubuntu-latest]  # 'windows-latest' has a problem with numpy
+        python-version: [3.7]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1  # use the latest code commit
+      
+    - name: Setup conda with python ${{ matrix.python-version }}
+      uses: s-weigand/setup-conda@v1.0.1
+      # If you use this workflow as a guide for your own installation, install Anaconda from:
+      # https://www.anaconda.com/distribution/
+         
+    - name: Install dependencies with conda
+      run: |
+        conda install pandas "bokeh>=1.4.0" openpyxl holoviews datashader "dask>=2.9.1" bottleneck
+
+    - name: Run the Python script describing DataExplorer
+      run: | 
+        # This is only useful for testing, it does not produce any output.
+        # It should, however, fail if depencendies are missing, etc.
+        python dataexplorer.py
+
+    - name: Run DataExplorer application
+      run: |
+        # Change directory upwards once
+        cd ..
+        # Start the Bokeh server (for this test, we use "&" to run it in the background)
+        bokeh serve dataexplorer --show &
+        # Now for a full test, we would need to connect with a browser
+
+    - name: Lint with flake8
+      if: runner.os == 'Linux'  # Only needs to run once
+      run: |
+        conda install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
