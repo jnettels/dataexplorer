@@ -1,26 +1,37 @@
-# -*- coding: utf-8 -*-
-'''
-@version: 1.0.0
+# Copyright (C) 2020 Joris Nettelstroth
 
-@author: Joris Nettelstroth
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-The DataExplorer should help you explore correlations within your data. It
-features a user interface that shows scatter plots of all the variables in
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+"""DataExplorer helps you explore correlations within your data.
+
+It features a user interface that shows scatter plots of all the variables in
 your data. Classes found in your data can be used to filter the views.
 
 You can start this program with the "start_bokeh.cmd" batch file. This starts
 a Bokeh server that can be accessed from any computer in the network.
 
 Alternatively, you can start it with your own command prompt in Windows:
-    - Go to Start and type "cmd"
-    - Select "Eingabeaufforderung"
-    - Change to the directory containing the folder "dataexplorer" (the folder
-      including the files "main.py" and "dataexplorer.py") with the command:
-      "cd path/to/folder"
-    - Start a Bokeh server running this application by typing:
-      "bokeh serve dataexplorer --show"
-    - Your webbrowser should open and display the interface of the program
-    - Under settings, hit the button to load your own Excel file
+
+- Go to Start and type "cmd"
+- Select "Eingabeaufforderung"
+- Change to the directory containing the folder "dataexplorer" (the folder
+  including the files "main.py" and "dataexplorer.py") with the command:
+  "cd path/to/folder"
+- Start a Bokeh server running this application by typing:
+  "bokeh serve dataexplorer --show"
+- Your webbrowser should open and display the interface of the program
+- Under settings, hit the button to load your own Excel file
 
 The file excel_example.xlsx shows the required input format and gives hints
 about the usage.
@@ -34,32 +45,33 @@ During installation, please allow to add variables to $PATH (or do that
 manually afterwards.) This allows Bokeh to be started from everywhere, which
 is required for the batch file to work.
 
-TODO:
-    - Transfer session settings via DatEx.__dict__
-    - Include download button for correlation matrix
-    - Include download for plots
+To do:
+
+- Transfer session settings via DatEx.__dict__
+- Include download button for correlation matrix
+- Include download for plots
 
 Known issues:
-    - Plots fail when Time column includes 'NaT', so those columns are removed
-    - By default, there is a limit of about 8 MB of data upload to the
-      browser. This is controlled by the Tornado server, with the parameter
-      'websocket_max_message_size'.
-      In Anaconda3/Lib/site-packages/bokeh/server/tornado.py go to line 221:
 
-      .. code:: python
+- Plots fail when Time column includes 'NaT', so those columns are removed
+- By default, there is a limit of about 8 MB of data upload to the
+  browser. This is controlled by the Tornado server, with the parameter
+  'websocket_max_message_size'.
+  In Anaconda3/Lib/site-packages/bokeh/server/tornado.py go to line 221:
 
-          super(BokehTornado, self).__init__(all_patterns)
+  .. code:: python
 
-      For 100 MB upload limit, replace it with:
+      super(BokehTornado, self).__init__(all_patterns)
 
-      .. code:: python
+  For 100 MB upload limit, replace it with:
 
-          super(BokehTornado, self).__init__(all_patterns,
-                websocket_max_message_size=100*1024*1024)
+  .. code:: python
 
-      Also see: https://github.com/bokeh/bokeh/issues/7374
+      super(BokehTornado, self).__init__(all_patterns,
+            websocket_max_message_size=100*1024*1024)
 
-'''
+  Also see: https://github.com/bokeh/bokeh/issues/7374
+"""
 
 import pandas as pd
 import numpy as np

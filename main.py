@@ -1,8 +1,21 @@
-# -*- coding: utf-8 -*-
+# Copyright (C) 2020 Joris Nettelstroth
 
-'''
-The DataExplorer should help you explore correlations within your data. It
-features a user interface that shows scatter plots of all the variables in
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see https://www.gnu.org/licenses/.
+
+"""DataExplorer helps you explore correlations within your data.
+
+It features a user interface that shows scatter plots of all the variables in
 your data. Classes found in your data can be used to filter the views.
 
 You can start this program with the "start_bokeh.cmd" batch file. This starts
@@ -13,7 +26,7 @@ folder name instead of a file name.
 
 We create an initial set of example data and then create the
 DataExplorer user interface.
-'''
+"""
 
 import argparse
 from dataexplorer import Dataexplorer
